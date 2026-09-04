@@ -1,47 +1,36 @@
 import { useEffect, useCallback } from 'react';
 import WebApp from '@twa-dev/sdk';
 
-const isTelegram = typeof window !== 'undefined' && !!(window as any).Telegram?.WebApp?.initData;
-
 export function useTelegram() {
   useEffect(() => {
-    if (isTelegram) {
-      try {
-        WebApp.ready();
-        WebApp.expand();
-      } catch (e) {
-        // Not in Telegram environment
-      }
+    try {
+      WebApp.ready();
+      WebApp.expand();
+    } catch (e) {
+      // Not in Telegram
     }
   }, []);
 
   const close = useCallback(() => {
-    if (isTelegram) WebApp.close();
+    try { WebApp.close(); } catch (e) {}
   }, []);
 
   const toggleMainButton = useCallback((text: string, onClick: () => void, _isVisible = true) => {
-    if (!isTelegram) return;
     try {
       WebApp.MainButton.setText(text);
       WebApp.MainButton.onClick(onClick);
       WebApp.MainButton.show();
-    } catch (e) {
-      // Not in Telegram
-    }
+    } catch (e) {}
   }, []);
 
   const hideMainButton = useCallback(() => {
-    if (!isTelegram) return;
     try {
       WebApp.MainButton.hide();
       WebApp.MainButton.offClick(() => {});
-    } catch (e) {
-      // Not in Telegram
-    }
+    } catch (e) {}
   }, []);
 
   const toggleBackButton = useCallback((isVisible: boolean, onClick?: () => void) => {
-    if (!isTelegram) return;
     try {
       if (isVisible && onClick) {
         WebApp.BackButton.onClick(onClick);
@@ -50,41 +39,55 @@ export function useTelegram() {
         WebApp.BackButton.hide();
         WebApp.BackButton.offClick(() => {});
       }
-    } catch (e) {
-      // Not in Telegram
-    }
+    } catch (e) {}
   }, []);
 
   const showAlert = useCallback((message: string) => {
-    if (isTelegram) {
-      WebApp.showAlert(message);
-    } else {
-      alert(message);
-    }
+    try { WebApp.showAlert(message); } catch (e) { alert(message); }
   }, []);
 
   const showConfirm = useCallback((message: string, callback?: (confirmed: boolean) => void) => {
-    if (isTelegram) {
+    try {
       WebApp.showConfirm(message, callback);
-    } else {
+    } catch (e) {
       const confirmed = window.confirm(message);
       if (callback) callback(confirmed);
     }
   }, []);
 
-  const user = isTelegram ? WebApp.initDataUnsafe?.user : null;
+  // Open Telegram's inline mode
+  const openInlineMode = useCallback(() => {
+    try {
+      WebApp.switchInlineQuery('', ['users']);
+    } catch (e) {
+      console.log('Failed to open inline mode:', e);
+    }
+  }, []);
+
+  // Open a Telegram chat with pre-filled message
+  const openTelegramChat = useCallback((username: string, text?: string) => {
+    try {
+      const url = `https://t.me/${username}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+      WebApp.openTelegramLink(url);
+    } catch (e) {
+      window.open(`https://t.me/${username}`, '_blank');
+    }
+  }, []);
+
+  const user = WebApp.initDataUnsafe?.user;
 
   return {
     WebApp,
     user,
-    isTelegram,
     close,
     toggleMainButton,
     hideMainButton,
     toggleBackButton,
     showAlert,
     showConfirm,
-    colorScheme: isTelegram ? WebApp.colorScheme : 'dark',
-    themeParams: isTelegram ? WebApp.themeParams : null,
+    openInlineMode,
+    openTelegramChat,
+    colorScheme: WebApp.colorScheme,
+    themeParams: WebApp.themeParams,
   };
 }

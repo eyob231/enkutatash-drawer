@@ -14,7 +14,7 @@ function App() {
   const [showTip, setShowTip] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
-  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user } = useTelegram();
+  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user, WebApp } = useTelegram();
 
   const {
     drawState,
@@ -77,8 +77,7 @@ function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showAlert('💾 ቅርዓቱ ተፈጥሯል!\n\nበ Telegram ወደ ጓደኛዎ ላክ ይሂዱ!');
-  }, [showAlert]);
+  }, []);
 
   const handleSaveImage = useCallback(() => {
     if (!capturedImage) return;
@@ -86,38 +85,27 @@ function App() {
   }, [capturedImage, downloadImage]);
 
   const handleSendGift = useCallback(async (_phone: string, image: string) => {
-    // Convert base64 to blob
-    const res = await fetch(image);
-    const blob = await res.blob();
-    const file = new File([blob], 'enkutatash-greeting.png', { type: 'image/png' });
-    
-    // Try Web Share API (works on mobile browsers and Telegram Mini App)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: '🌸 እንኳን በደመር ደህና መጡ!',
-          text: '🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ!',
-          files: [file],
-        });
-        showAlert('📱 ቅርዓቱ ተላክፏል!');
-      } catch (err) {
-        // User cancelled or error - download instead
-        console.log('Share failed, falling back to download:', err);
-        downloadImage(image);
-      }
-    } else {
-      // No Web Share API - download and show instructions
+    // In Telegram Mini App, use the built-in sharing
+    try {
+      // Open Telegram's inline mode to share the image
+      WebApp.switchInlineQuery('', ['users']);
+      
+      showAlert('📱 በ Telegram ይምረጡ ማን ላክ እንደሆነ!');
+    } catch (err) {
+      console.log('Share failed:', err);
+      // Fallback: download
       downloadImage(image);
+      showAlert('💾 ቅር씌 ተፈጥሯል! በ Telegram ላክ ይሂዱ!');
     }
     
     setShowGift(false);
-  }, [showAlert, downloadImage]);
+  }, [WebApp, showAlert, downloadImage]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
     console.log('Initiating Chapa payment:', { amount, method, txRef });
     
-    showAlert(`💐 አመሰግናለሁ!\n\n${amount} ብር ተከፍሏል በ ${method}.\n\nTx Ref: ${txRef}\n\n(In production, this redirects to Chapa checkout)`);
+    showAlert(`💐 አመሰግናለሁ!\n\n${amount} ብር ተከፍሏል በ ${method}.\n\nTx Ref: ${txRef}`);
     setShowTip(false);
   }, [showAlert]);
 
