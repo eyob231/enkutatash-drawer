@@ -19,6 +19,7 @@ console.log('🌸 Enkutatash Bot starting...');
 
 // /start command
 bot.command('start', async (ctx) => {
+  console.log('🚀 Start command received from:', ctx.from?.id);
   const name = ctx.from?.first_name || 'User';
   await ctx.reply(
     `🌸 እንኳን በደመር ደህና መጡ!\n\n` +
@@ -49,11 +50,16 @@ bot.command('help', async (ctx) => {
 
 // /list command
 bot.command('list', async (ctx) => {
+  console.log('📋 List command received');
   const userId = ctx.from?.id;
+  console.log('User ID:', userId);
+  console.log('Storage keys:', Array.from(imageStorage.keys()));
+  
   const images = imageStorage.get(userId) || [];
+  console.log('Images for this user:', images.length);
   
   if (images.length === 0) {
-    return ctx.reply('📋 ያስቀመጡት ቅርዓት የለም!');
+    return ctx.reply('📋 ያስቀመጡት ቅርዓት የለም!\n\n📸 ቅርዓት ለማስቀምጥ ይላኩ!');
   }
   
   let text = '📋 ያስቀመጡት ቅርዓቶች:\n\n';
@@ -116,14 +122,19 @@ bot.command('delete', async (ctx) => {
 
 // Handle photos
 bot.on('photo', async (ctx) => {
+  console.log('📸 Photo received!');
   const userId = ctx.from?.id;
   const chatId = ctx.chat?.id;
   const photos = ctx.message?.photo;
+  
+  console.log('User ID:', userId, 'Photos:', photos?.length);
   
   if (!photos || photos.length === 0) return;
   
   const photo = photos[photos.length - 1];
   const caption = ctx.message?.caption || 'Enkutatash Greeting 🌸';
+  
+  console.log('Photo file_id:', photo.file_id);
   
   if (!imageStorage.has(userId)) {
     imageStorage.set(userId, []);
@@ -137,6 +148,8 @@ bot.on('photo', async (ctx) => {
     index: images.length + 1
   };
   images.push(entry);
+  
+  console.log('Image saved. Total for user:', images.length);
   
   await ctx.reply(
     `✅ ቅርዓቱ ተቀምጧል!\n\n` +
