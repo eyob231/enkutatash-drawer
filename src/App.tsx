@@ -77,7 +77,7 @@ function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showAlert('💾 ቅርዓቱ ተፈጥሯል! በ Telecom ላክ ይላኩ!');
+    showAlert('💾 ቅርዓቱ ተፈጥሯል!\n\nበ Telegram ወደ ጓደኛዎ ላክ ይሂዱ!');
   }, [showAlert]);
 
   const handleSaveImage = useCallback(() => {
@@ -85,36 +85,33 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
-  const handleSendGift = useCallback(async (phone: string, image: string) => {
+  const handleSendGift = useCallback(async (_phone: string, image: string) => {
     // Convert base64 to blob
     const res = await fetch(image);
     const blob = await res.blob();
     const file = new File([blob], 'enkutatash-greeting.png', { type: 'image/png' });
     
-    const shareText = `🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ! ለ ${phone}`;
-    
-    // Try Web Share API (works on mobile & Telegram Mini App)
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    // Try Web Share API (works on mobile browsers and Telegram Mini App)
+    if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Enkutatash Greeting 🌸',
-          text: shareText,
+          title: '🌸 እንኳን በደመር ደህና መጡ!',
+          text: '🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ!',
           files: [file],
         });
         showAlert('📱 ቅርዓቱ ተላክፏል!');
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          // Fallback: download
-          downloadImage(image);
-        }
+        // User cancelled or error - download instead
+        console.log('Share failed, falling back to download:', err);
+        downloadImage(image);
       }
     } else {
-      // Fallback: download the image
+      // No Web Share API - download and show instructions
       downloadImage(image);
     }
     
     setShowGift(false);
-  }, [showAlert]);
+  }, [showAlert, downloadImage]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
