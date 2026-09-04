@@ -70,28 +70,49 @@ function App() {
     }
   }, [getCanvasImage]);
 
-  const handleSaveImage = useCallback(() => {
-    if (!capturedImage) return;
+  const downloadImage = useCallback((imageData: string) => {
     const link = document.createElement('a');
     link.download = 'enkutatash-greeting.png';
-    link.href = capturedImage;
-    link.click();
-  }, [capturedImage]);
-
-  const handleSendGift = useCallback((phone: string, image: string) => {
-    // Convert base64 image to blob and download
-    const link = document.createElement('a');
-    link.download = 'enkutatash-greeting.png';
-    link.href = image;
+    link.href = imageData;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showAlert('💾 ቅርዓቱ ተፈጥሯል! በ Telecom ላክ ይላኩ!');
+  }, [showAlert]);
+
+  const handleSaveImage = useCallback(() => {
+    if (!capturedImage) return;
+    downloadImage(capturedImage);
+  }, [capturedImage, downloadImage]);
+
+  const handleSendGift = useCallback(async (phone: string, image: string) => {
+    // Convert base64 to blob
+    const res = await fetch(image);
+    const blob = await res.blob();
+    const file = new File([blob], 'enkutatash-greeting.png', { type: 'image/png' });
     
-    // Open Telegram to share
-    const telegramUrl = `https://t.me/share/url?url=https://enkutatash.app&text=🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ! ስጦታ ላክ ለ ${phone}`;
-    window.open(telegramUrl, '_blank');
+    const shareText = `🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ! ለ ${phone}`;
     
-    showAlert('📱 ቅርዓቱ ተፈጥሯል! \n\nበ Telegram ላክ ወደ ጓደኛዎ ይላኩ!');
+    // Try Web Share API (works on mobile & Telegram Mini App)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'Enkutatash Greeting 🌸',
+          text: shareText,
+          files: [file],
+        });
+        showAlert('📱 ቅርዓቱ ተላክፏል!');
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          // Fallback: download
+          downloadImage(image);
+        }
+      }
+    } else {
+      // Fallback: download the image
+      downloadImage(image);
+    }
+    
     setShowGift(false);
   }, [showAlert]);
 

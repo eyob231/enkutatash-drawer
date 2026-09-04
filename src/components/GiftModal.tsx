@@ -14,6 +14,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState<'preview' | 'phone' | 'share'>('preview');
   const [savedPhone, setSavedPhone] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(PHONE_KEY);
@@ -43,8 +44,13 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
     setStep('phone');
   };
 
-  const handleShare = () => {
-    onSend(savedPhone || phone, image);
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      onSend(savedPhone || phone, image);
+    } finally {
+      setSharing(false);
+    }
   };
 
   const handleClose = () => {
@@ -124,8 +130,8 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
               የእርስዎ ቅርዓት ከ Message ጋር ይላኩ
             </p>
             <div className="share-buttons">
-              <button className="share-btn telegram" onClick={handleShare}>
-                📱 በ Telegram ላክ
+              <button className="share-btn telegram" onClick={handleShare} disabled={sharing}>
+                {sharing ? '⏳ በመላክ ላይ...' : '📱 በ Telegram ላክ'}
               </button>
               <button className="share-btn download" onClick={() => {
                 const link = document.createElement('a');
@@ -269,8 +275,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           background: linear-gradient(135deg, #0088cc, #0066aa);
           color: #fff;
         }
-        .share-btn.telegram:hover {
+        .share-btn.telegram:hover:not(:disabled) {
           background: linear-gradient(135deg, #0099dd, #0077bb);
+        }
+        .share-btn.telegram:disabled {
+          opacity: 0.7;
+          cursor: wait;
         }
         .share-btn.download {
           background: rgba(255,255,255,0.1);
