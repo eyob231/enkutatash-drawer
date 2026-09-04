@@ -49,7 +49,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
 
   const saveState = useCallback(() => {
     const canvas = getCanvas();
-    if (!canvas) return;
+    if (!canvas || canvas.width === 0 || canvas.height === 0) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 

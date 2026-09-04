@@ -11,7 +11,7 @@ interface StampBarProps {
 export function StampBar({ activeStamp, onStampSelect, onToolChange }: StampBarProps) {
   return (
     <div className="stamp-bar">
-      <span className="stamp-label">🌸 Flowers</span>
+      <span className="stamp-label">🌸 አበቦች</span>
       <div className="stamp-list">
         {FLOWER_STAMPS.map((stamp) => (
           <button

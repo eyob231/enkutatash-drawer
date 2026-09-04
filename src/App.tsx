@@ -46,20 +46,18 @@ function App() {
     link.click();
   }, [capturedImage]);
 
-  const handleSendGift = useCallback(() => {
-    // In Telegram Mini App, this would use Telegram.WebApp.sendImage()
-    // For preview/demo, we simulate it
-    const tg = (window as unknown as Record<string, unknown>).Telegram;
-    if (tg && typeof tg === 'object' && 'WebApp' in tg) {
-      const webApp = (tg as { WebApp: { sendImage: (img: string) => void } }).WebApp;
-      if (webApp.sendImage && capturedImage) {
-        webApp.sendImage(capturedImage);
-      }
-    } else {
-      alert('🎁 Gift sent! (In Telegram, this would send to your friend)');
-    }
+  const handleSendGift = useCallback((phone: string) => {
+    // TeleBirr integration — open TeleBirr with the phone number
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const telebirrUrl = `telbirr://send?phone=${cleanPhone}`;
+    
+    // For demo, show the link
+    alert(`📱 ቴሌብር ቁጥር: ${cleanPhone}\n\nTeleBirr Link: ${telebirrUrl}\n\n(In production, this opens TeleBirr app)`);
+    
+    // In production, you would:
+    // window.location.href = telebirrUrl;
     setShowGift(false);
-  }, [capturedImage]);
+  }, []);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     // Chapa integration — redirect to Chapa checkout
@@ -81,14 +79,14 @@ function App() {
         <div className="header-left">
           <span className="app-icon">🌸</span>
           <div>
-            <h1>Enkutatash Drawer</h1>
-            <span className="subtitle">Draw flowers & send gifts 🇪🇹</span>
+            <h1>መልካም አዲስ ዓመት</h1>
+            <span className="subtitle">አበቦችን ይ ጀምረው ስጦታ ይላኩ 🇪🇹</span>
           </div>
         </div>
         <div className="header-actions">
-          <button className="header-btn" onClick={undo} disabled={!canUndo} title="Undo">↩️</button>
-          <button className="header-btn" onClick={redo} disabled={!canRedo} title="Redo">↪️</button>
-          <button className="header-btn tip-btn" onClick={() => setShowTip(true)} title="Send a tip">
+          <button className="header-btn" onClick={undo} disabled={!canUndo} title="ተመላሽ">↩️</button>
+          <button className="header-btn" onClick={redo} disabled={!canRedo} title="እንደገና">↪️</button>
+          <button className="header-btn tip-btn" onClick={() => setShowTip(true)} title="ስጦታ ላክ">
             💐
           </button>
         </div>
@@ -116,12 +114,11 @@ function App() {
       />
 
       {/* Bottom Actions */}
-      <div className="bottom-bar">
-        <button className="btn btn-secondary" onClick={handleSaveImage} disabled={!canvasReady}>
-          💾 Save
+      <div className="bottom-bar">          <button className="btn btn-secondary" onClick={handleSaveImage} disabled={!canvasReady}>
+          💾 አስቀምጥ
         </button>
         <button className="btn btn-primary" onClick={handleOpenGift} disabled={!canvasReady}>
-          🎁 Send Gift
+          🎁 ስጦታ ላክ
         </button>
       </div>
 

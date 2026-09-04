@@ -1,37 +1,84 @@
+import { useState } from 'react';
+
 interface GiftModalProps {
   isOpen: boolean;
   image: string | null;
   onClose: () => void;
-  onSend: () => void;
+  onSend: (phone: string) => void;
   onSave: () => void;
 }
 
 export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
+  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<'preview' | 'phone'>('preview');
+
   if (!isOpen || !image) return null;
 
+  const handleSend = () => {
+    if (step === 'preview') {
+      setStep('phone');
+    } else if (phone.length >= 10) {
+      onSend(phone);
+    }
+  };
+
+  const handleClose = () => {
+    setStep('preview');
+    setPhone('');
+    onClose();
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content gift-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}>✕</button>
-        <h2>🎁 Send as Enkutatash Gift</h2>
-        <div className="gift-preview">
-          <img src={image} alt="Your drawing" />
-        </div>
-        <p className="gift-desc">
-          Send your flower drawing to a friend for <strong>Enkutatash</strong>! 🇪🇹
-        </p>
-        <div className="gift-message">
-          <span>Message: </span>
-          <em>"Happy Enkutatash! 🌸🌼🌺" </em>
-        </div>
-        <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onSave}>
-            💾 Save Image
-          </button>
-          <button className="btn btn-primary" onClick={onSend}>
-            🎁 Send Gift
-          </button>
-        </div>
+        <button className="close-btn" onClick={handleClose}>✕</button>
+        
+        {step === 'preview' ? (
+          <>
+            <h2>🎁 ስጦታ ላክ</h2>
+            <div className="gift-preview">
+              <img src={image} alt="የእርስዎ ቅርዓት" />
+            </div>
+            <div className="gift-message">
+              <span>መልዕክት: </span>
+              <em>"መልካም አዲስ ዓመት! 🌸🌼🌺" </em>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={onSave}>
+                💾 አስቀምጥ
+              </button>
+              <button className="btn btn-primary" onClick={handleSend}>
+                🎁 ቀጥል
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2>📱 የቴሌብር ቁጥር ያስገቡ</h2>
+            <p className="gift-desc">
+              ለስጦታ የቴሌብር ቁጥር ያስገቡ
+            </p>
+            <div className="phone-input-group">
+              <input
+                type="tel"
+                placeholder="09XXXXXXXX"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="phone-input"
+                maxLength={10}
+              />
+              <span className="phone-hint">+251</span>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                ↩️ ተመለስ
+              </button>
+              <button className="btn btn-primary" onClick={handleSend} disabled={phone.length < 10}>
+                📤 ላክ
+              </button>
+            </div>
+          </>
+        )}
       </div>
       <style>{`
         .modal-overlay {
@@ -86,6 +133,30 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .gift-message span {
           margin-right: var(--sp-xs);
         }
+        .phone-input-group {
+          display: flex;
+          align-items: center;
+          gap: var(--sp-sm);
+          margin-bottom: var(--sp-lg);
+        }
+        .phone-input {
+          flex: 1;
+          padding: var(--sp-md);
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(255,215,0,0.3);
+          background: rgba(255,255,255,0.05);
+          color: var(--text-light);
+          font-size: 16px;
+          outline: none;
+        }
+        .phone-input:focus {
+          border-color: var(--meskel-yellow);
+          box-shadow: 0 0 8px rgba(255,215,0,0.3);
+        }
+        .phone-hint {
+          color: var(--text-muted);
+          font-size: 14px;
+        }
         .close-btn {
           position: absolute;
           top: var(--sp-sm);
@@ -128,6 +199,10 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .btn-primary:hover {
           background: linear-gradient(135deg, #FFE44D, #FFD700);
           box-shadow: 0 0 16px rgba(255,215,0,0.5);
+        }
+        .btn-primary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .btn-secondary {
           background: rgba(255,255,255,0.1);

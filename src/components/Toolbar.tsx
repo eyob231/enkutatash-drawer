@@ -1,15 +1,15 @@
 import type { Tool } from '../hooks/useCanvas';
 
 const COLORS = [
-  { name: 'Black', value: '#000000' },
-  { name: 'Yellow', value: '#FFD700' },
-  { name: 'Green', value: '#009A44' },
-  { name: 'Red', value: '#DA121A' },
-  { name: 'Blue', value: '#4189DD' },
-  { name: 'Brown', value: '#8B4513' },
-  { name: 'Pink', value: '#FF69B4' },
-  { name: 'Orange', value: '#FF8C00' },
-  { name: 'White', value: '#FFFFFF' },
+  { name: 'ጥቁር', value: '#000000' },
+  { name: 'ቢጫ', value: '#FFD700' },
+  { name: 'አረንጓዴ', value: '#009A44' },
+  { name: 'ቀይ', value: '#DA121A' },
+  { name: 'ሰማያዊ', value: '#4189DD' },
+  { name: 'ቡናማ', value: '#8B4513' },
+  { name: 'ፒንክ', value: '#FF69B4' },
+  { name: 'ኦረንጅ', value: '#FF8C00' },
+  { name: 'ነጭ', value: '#FFFFFF' },
 ];
 
 const BRUSH_SIZES = [2, 4, 8, 14];
@@ -35,12 +35,12 @@ export function Toolbar({
         <button
           className={`tool-btn ${tool === 'pen' ? 'active' : ''}`}
           onClick={() => onToolChange('pen')}
-          title="Pen"
+          title="ፔን"
         >✏️</button>
         <button
           className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
           onClick={() => onToolChange('eraser')}
-          title="Eraser"
+          title="ማጥፋት"
         >🧹</button>
       </div>
 
@@ -64,7 +64,7 @@ export function Toolbar({
             key={s}
             className={`brush-btn ${brushSize === s ? 'active' : ''}`}
             onClick={() => onBrushSizeChange(s)}
-            title={`Size ${s}`}
+            title={`መጠን ${s}`}
           >
             <span className="brush-dot" style={{ width: s + 2, height: s + 2 }} />
           </button>
@@ -76,7 +76,7 @@ export function Toolbar({
         <button
           className="tool-btn danger"
           onClick={onClear}
-          title="Clear canvas"
+          title="ቦርዱን ማጥፋት"
         >🗑️</button>
       </div>
 

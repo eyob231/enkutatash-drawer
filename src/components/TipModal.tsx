@@ -9,16 +9,16 @@ interface TipModalProps {
 
 const PRESET_AMOUNTS = [50, 100, 200, 500];
 const PAYMENT_METHODS = [
-  { id: 'telebirr', name: 'TeleBirr', icon: '📱' },
+  { id: 'telebirr', name: 'ቴሌብር', icon: '📱' },
   { id: 'cbe', name: 'CBE Birr', icon: '🏦' },
-  { id: 'amole', name: 'Amole', icon: '💳' },
-  { id: 'chapa', name: 'Chapa (All)', icon: '🌐' },
+  { id: 'amole', name: 'አሞሌ', icon: '💳' },
+  { id: 'chapa', name: 'ቻፓ (ሁሉም)', icon: '🌐' },
 ];
 
 export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) {
   const [amount, setAmount] = useState(100);
   const [customAmount, setCustomAmount] = useState('');
-  const [method, setMethod] = useState('chapa');
+  const [method, setMethod] = useState('telebirr');
 
   if (!isOpen) return null;
 
@@ -34,12 +34,12 @@ export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content tip-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>✕</button>
-        <h2>💐 Send a Tip</h2>
-        <p className="tip-to">Send love to <strong>{artistName}</strong></p>
+        <h2>💐 ስጦታ ላክ</h2>
+        <p className="tip-to">በ <strong>{artistName}</strong> ላይ ፍቅር ይላኩ</p>
 
         {/* Amount Selection */}
         <div className="amount-section">
-          <label>Amount (ETB)</label>
+          <label>መጠን (ብር)</label>
           <div className="preset-amounts">
             {PRESET_AMOUNTS.map((a) => (
               <button
@@ -47,13 +47,13 @@ export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) 
                 className={`amount-btn ${amount === a && !customAmount ? 'active' : ''}`}
                 onClick={() => { setAmount(a); setCustomAmount(''); }}
               >
-                {a} Br
+                {a} ብር
               </button>
             ))}
           </div>
           <input
             type="number"
-            placeholder="Custom amount"
+            placeholder="የምርምር መጠን"
             value={customAmount}
             onChange={(e) => setCustomAmount(e.target.value)}
             className="custom-amount"
@@ -63,7 +63,7 @@ export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) 
 
         {/* Payment Method */}
         <div className="method-section">
-          <label>Pay with</label>
+          <label>የክፍያ ዘዴ</label>
           <div className="methods">
             {PAYMENT_METHODS.map((m) => (
               <button
@@ -84,19 +84,61 @@ export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) 
           onClick={handlePay}
           disabled={finalAmount <= 0}
         >
-          💳 Pay {finalAmount} ETB via Chapa
+          💳 {finalAmount} ብር ይክፈሉ
         </button>
 
         <p className="chapa-note">
-          🔒 Powered by <strong>Chapa</strong> — secure Ethiopian payment gateway
+          🔒 በ <strong>ቻፓ</strong> የተጠበቀ የኢትዮጵያ ክፍያ መረብ
         </p>
-
-        <button className="close-btn" onClick={onClose}>✕</button>
       </div>
 
       <style>{`
-        .tip-modal {
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+          padding: var(--sp-lg);
+        }
+        .modal-content {
+          background: linear-gradient(180deg, #1a1500 0%, #0d0d1a 100%);
+          border-radius: var(--radius-lg);
+          padding: var(--sp-xl);
           max-width: 380px;
+          width: 100%;
+          position: relative;
+          text-align: center;
+          box-shadow: 0 0 24px rgba(255,215,0,0.2);
+        }
+        .modal-content h2 {
+          font-size: 18px;
+          margin-bottom: var(--sp-md);
+          color: var(--meskel-yellow);
+        }
+        .close-btn {
+          position: absolute;
+          top: var(--sp-sm);
+          right: var(--sp-sm);
+          width: 30px;
+          height: 30px;
+          border-radius: var(--radius-full);
+          background: rgba(218,18,26,0.7);
+          color: #fff;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          border: 1px solid rgba(255,215,0,0.3);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .close-btn:hover {
+          background: var(--danger);
+          color: #fff;
+          transform: scale(1.15);
         }
         .tip-to {
           font-size: 13px;
@@ -198,31 +240,6 @@ export function TipModal({ isOpen, artistName, onClose, onPay }: TipModalProps) 
           margin-top: var(--sp-md);
           border-top: 1px solid rgba(255,215,0,0.15);
           padding-top: var(--sp-sm);
-        }
-        .close-btn {
-          position: sticky;
-          top: 0;
-          right: 0;
-          z-index: 10;
-          width: 30px;
-          height: 30px;
-          border-radius: var(--radius-full);
-          background: rgba(218,18,26,0.7);
-          color: #fff;
-          font-size: 15px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          margin-top: calc(-1 * var(--sp-md));
-          margin-right: var(--sp-sm);
-          border: 1px solid rgba(255,215,0,0.3);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
-        .close-btn:hover {
-          background: var(--danger);
-          color: #fff;
-          transform: scale(1.15);
         }
       `}</style>
     </div>
