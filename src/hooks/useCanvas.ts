@@ -21,7 +21,6 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
   const lastPos = useRef({ x: 0, y: 0 });
   const history = useRef<HistoryEntry[]>([]);
   const historyIndex = useRef(-1);
-  const stampPreviewPos = useRef<{ x: number; y: number } | null>(null);
 
   const [drawState, setDrawState] = useState<DrawState>({
     tool: 'pen',

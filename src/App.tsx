@@ -49,7 +49,7 @@ function App() {
   const handleSendGift = useCallback(() => {
     // In Telegram Mini App, this would use Telegram.WebApp.sendImage()
     // For preview/demo, we simulate it
-    const tg = (window as Record<string, unknown>).Telegram;
+    const tg = (window as unknown as Record<string, unknown>).Telegram;
     if (tg && typeof tg === 'object' && 'WebApp' in tg) {
       const webApp = (tg as { WebApp: { sendImage: (img: string) => void } }).WebApp;
       if (webApp.sendImage && capturedImage) {
@@ -63,13 +63,12 @@ function App() {
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     // Chapa integration — redirect to Chapa checkout
-    const CHAPA_API = 'https://api.chapa.co/v1/transaction/initialize';
     const txRef = `enkutatash-${Date.now()}`;
 
     console.log('Initiating Chapa payment:', { amount, method, txRef });
 
     // In production, this would call your backend:
-    // fetch(CHAPA_API, { method: 'POST', body: JSON.stringify({ amount, currency: 'ETB', tx_ref: txRef, ... }) })
+    // fetch('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', body: JSON.stringify({ amount, currency: 'ETB', tx_ref: txRef, ... }) })
 
     alert(`💐 Thank you!\n\nPayment of ${amount} ETB initiated via ${method}.\n\nTx Ref: ${txRef}\n\n(In production, this redirects to Chapa checkout)`);
     setShowTip(false);
