@@ -80,11 +80,15 @@ function App() {
 
   const handleSendGift = useCallback((phone: string) => {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const telebirrUrl = `telbirr://send?phone=${cleanPhone}`;
     
-    showAlert(`📱 የቴሌብር ቁጥር: ${cleanPhone}\n\nTeleBirr Link: ${telebirrUrl}\n\n(In production, this opens TeleBirr app)`);
+    // In Telegram, use the native share
+    // In browser, open Telegram share URL
+    const telegramShareUrl = `https://t.me/share/url?url=https://enkutatash.app&text=🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ!`;
     
-    // In production: window.location.href = telebirrUrl;
+    // Open Telegram share dialog
+    window.open(telegramShareUrl, '_blank');
+    
+    showAlert(`📱 የቴሌብር ቁጥር: ${cleanPhone}\n\nTelegram ላክ ተከፍቧል!`);
     setShowGift(false);
   }, [showAlert]);
 
