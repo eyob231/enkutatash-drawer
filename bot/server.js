@@ -203,6 +203,11 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+
+// Start the bot polling
+bot.startPolling();
+console.log('🤖 Bot polling started');
+
 app.listen(PORT, () => {
   console.log(`🌸 Enkutatash Bot running on port ${PORT}`);
 });
