@@ -1,10 +1,11 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { StampBar } from './components/StampBar';
 import { GiftModal } from './components/GiftModal';
 import { TipModal } from './components/TipModal';
 import { useCanvas } from './hooks/useCanvas';
+import { useTelegram } from './hooks/useTelegram';
 import type { Stamp } from './utils/stamps';
 
 function App() {
@@ -12,6 +13,8 @@ function App() {
   const [showGift, setShowGift] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user } = useTelegram();
 
   const {
     drawState,
@@ -25,6 +28,35 @@ function App() {
     clearCanvas,
     getCanvasImage,
   } = useCanvas(canvasRef);
+
+  // Set up Telegram Main Button
+  useEffect(() => {
+    if (canvasReady) {
+      toggleMainButton('🎁 ስጦታ ላክ', () => {
+        const img = getCanvasImage();
+        if (img) {
+          setCapturedImage(img);
+          setShowGift(true);
+        }
+      });
+    }
+    
+    return () => {
+      hideMainButton();
+    };
+  }, [canvasReady, toggleMainButton, hideMainButton, getCanvasImage]);
+
+  // Set up Back Button for modals
+  useEffect(() => {
+    if (showGift || showTip) {
+      toggleBackButton(true, () => {
+        setShowGift(false);
+        setShowTip(false);
+      });
+    } else {
+      toggleBackButton(false);
+    }
+  }, [showGift, showTip, toggleBackButton]);
 
   const handleStampSelect = useCallback((stamp: Stamp) => {
     setDrawState((prev) => ({ ...prev, activeStamp: stamp, tool: 'stamp' }));
@@ -47,30 +79,24 @@ function App() {
   }, [capturedImage]);
 
   const handleSendGift = useCallback((phone: string) => {
-    // TeleBirr integration — open TeleBirr with the phone number
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const telebirrUrl = `telbirr://send?phone=${cleanPhone}`;
     
-    // For demo, show the link
-    alert(`📱 ቴሌብር ቁጥር: ${cleanPhone}\n\nTeleBirr Link: ${telebirrUrl}\n\n(In production, this opens TeleBirr app)`);
+    showAlert(`📱 የቴሌብር ቁጥር: ${cleanPhone}\n\nTeleBirr Link: ${telebirrUrl}\n\n(In production, this opens TeleBirr app)`);
     
-    // In production, you would:
-    // window.location.href = telebirrUrl;
+    // In production: window.location.href = telebirrUrl;
     setShowGift(false);
-  }, []);
+  }, [showAlert]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
-    // Chapa integration — redirect to Chapa checkout
     const txRef = `enkutatash-${Date.now()}`;
-
     console.log('Initiating Chapa payment:', { amount, method, txRef });
-
-    // In production, this would call your backend:
-    // fetch('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', body: JSON.stringify({ amount, currency: 'ETB', tx_ref: txRef, ... }) })
-
-    alert(`💐 Thank you!\n\nPayment of ${amount} ETB initiated via ${method}.\n\nTx Ref: ${txRef}\n\n(In production, this redirects to Chapa checkout)`);
+    
+    showAlert(`💐 አመሰግናለሁ!\n\n${amount} ብር ተከፍሏል በ ${method}.\n\nTx Ref: ${txRef}\n\n(In production, this redirects to Chapa checkout)`);
     setShowTip(false);
-  }, []);
+  }, [showAlert]);
+
+  const displayName = user ? user.first_name : 'ተቋም';
 
   return (
     <div className="app">
@@ -79,7 +105,7 @@ function App() {
         <div className="header-left">
           <span className="app-icon">🌸</span>
           <div>
-            <h1>መልካም አዲስ ዓመት</h1>
+            <h1>እንኳን በደመር ደህና መጡ</h1>
             <span className="subtitle">አበቦችን ይ ጀምረው ስጦታ ይላኩ 🇪🇹</span>
           </div>
         </div>
@@ -114,7 +140,8 @@ function App() {
       />
 
       {/* Bottom Actions */}
-      <div className="bottom-bar">          <button className="btn btn-secondary" onClick={handleSaveImage} disabled={!canvasReady}>
+      <div className="bottom-bar">
+        <button className="btn btn-secondary" onClick={handleSaveImage} disabled={!canvasReady}>
           💾 አስቀምጥ
         </button>
         <button className="btn btn-primary" onClick={handleOpenGift} disabled={!canvasReady}>
@@ -132,7 +159,7 @@ function App() {
       />
       <TipModal
         isOpen={showTip}
-        artistName="the artist"
+        artistName={displayName}
         onClose={() => setShowTip(false)}
         onPay={handleTipPay}
       />
@@ -174,20 +201,6 @@ function App() {
         .subtitle {
           font-size: 11px;
           color: var(--text-muted);
-        }
-        .btn-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: var(--radius-full);
-          background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(218,18,26,0.2));
-          font-size: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid rgba(255,215,0,0.3);
-        }
-        .btn-icon:hover {
-          background: linear-gradient(135deg, rgba(255,215,0,0.35), rgba(218,18,26,0.35));
         }
         .header-actions {
           display: flex;
