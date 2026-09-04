@@ -1,0 +1,83 @@
+:root {
+  /* Enkutatash Theme Colors */
+  --meskel-yellow: #FFD700;
+  --eth-green: #009A44;
+  --eth-red: #DA121A;
+  --sky-blue: #4189DD;
+  --warm-brown: #8B4513;
+  --cream: #FFF8E7;
+  --dark-bg: #0d0d1a;
+  --card-bg: #1a1a0f;
+  --text-light: #f5f0e0;
+  --text-muted: #b0a890;
+  --accent: var(--meskel-yellow);
+  --accent-hover: #e6c200;
+  --danger: var(--eth-red);
+  --success: var(--eth-green);
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 12px;
+  --sp-lg: 16px;
+  --sp-xl: 24px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 50%;
+
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-light);
+  background: var(--dark-bg);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  background: var(--dark-bg);
+}
+
+#root {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
