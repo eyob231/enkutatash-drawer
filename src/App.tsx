@@ -8,13 +8,15 @@ import { useCanvas } from './hooks/useCanvas';
 import { useTelegram } from './hooks/useTelegram';
 import type { Stamp } from './utils/stamps';
 
+const BOT_API_URL = 'https://enkutatash-drawer.onrender.com';
+
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showGift, setShowGift] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
-  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user, WebApp } = useTelegram();
+  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user } = useTelegram();
 
   const {
     drawState,
@@ -84,44 +86,27 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
-  const handleSendGift = useCallback(async (_phone: string, image: string) => {
-    // Try to send via bot API
-    try {
-      const botApiUrl = 'https://enkutatash-bot.vercel.app/api/send-image';
-      
-      const response = await fetch(botApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          imageData: image,
-          caption: '🌸 እንኳን በደመር ደህና መጡ!',
-        }),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        showAlert('📱 ቅርዓቱ ተላክፏል!');
-      } else {
-        // Fallback: open Telegram inline mode
-        WebApp.switchInlineQuery('', ['users']);
-        showAlert('📱 በ Telegram ይምረጡ ማን ላክ!');
-      }
-    } catch (err) {
-      console.log('Share failed:', err);
-      // Fallback: open Telegram inline mode
-      try {
-        WebApp.switchInlineQuery('', ['users']);
-        showAlert('📱 በ Telegram ይምረጡ ማን ላክ!');
-      } catch (e) {
-        downloadImage(image);
-        showAlert('💾 ቅርዓቱ ተፈጥሯል! በ Telegram ላክ ይሂዱ!');
-      }
+  const handleSendGift = useCallback(async (recipientId: string, image: string) => {
+    // Send image to backend API which forwards via Telegram Bot
+    const response = await fetch(`${BOT_API_URL}/api/send-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipientId: recipientId,
+        imageData: image,
+        caption: '🌸 እንኳን በደመር ደህና መጡ!',
+        senderName: user?.first_name || ' Arkadaş',
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || 'መላክ አልተቻለም');
     }
     
     setShowGift(false);
-  }, [WebApp, showAlert, downloadImage, user]);
+  }, [user]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;

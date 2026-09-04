@@ -4,58 +4,59 @@ interface GiftModalProps {
   isOpen: boolean;
   image: string | null;
   onClose: () => void;
-  onSend: (phone: string, image: string) => void;
+  onSend: (recipientId: string, image: string) => void;
   onSave: () => void;
 }
 
-const PHONE_KEY = 'enkutatash_phone';
+const RECIPIENT_KEY = 'enkutatash_recipient';
 
 export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
-  const [phone, setPhone] = useState('');
-  const [step, setStep] = useState<'preview' | 'phone' | 'share'>('preview');
-  const [savedPhone, setSavedPhone] = useState('');
-  const [sharing, setSharing] = useState(false);
+  const [recipientId, setRecipientId] = useState('');
+  const [step, setStep] = useState<'preview' | 'recipient' | 'sending' | 'done'>('preview');
+  const [savedRecipient, setSavedRecipient] = useState('');
+
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(PHONE_KEY);
-    if (saved) setSavedPhone(saved);
+    const saved = localStorage.getItem(RECIPIENT_KEY);
+    if (saved) setSavedRecipient(saved);
   }, []);
 
   if (!isOpen || !image) return null;
 
   const handleContinue = () => {
-    if (savedPhone) {
-      setStep('share');
+    if (savedRecipient) {
+      setStep('sending');
+      handleAutoSend(savedRecipient);
     } else {
-      setStep('phone');
+      setStep('recipient');
     }
   };
 
-  const handlePhoneSubmit = () => {
-    if (phone.length >= 10) {
-      localStorage.setItem(PHONE_KEY, phone);
-      setSavedPhone(phone);
-      setStep('share');
+  const handleRecipientSubmit = () => {
+    if (recipientId.trim()) {
+      localStorage.setItem(RECIPIENT_KEY, recipientId.trim());
+      setSavedRecipient(recipientId.trim());
+      setStep('sending');
+      handleAutoSend(recipientId.trim());
     }
   };
 
-  const handleChangePhone = () => {
-    setPhone(savedPhone);
-    setStep('phone');
-  };
-
-  const handleShare = async () => {
-    setSharing(true);
+  const handleAutoSend = async (targetId: string) => {
+    setError('');
     try {
-      onSend(savedPhone || phone, image);
-    } finally {
-      setSharing(false);
+      await onSend(targetId, image);
+      setStep('done');
+    } catch (err: any) {
+      setError(err.message || 'መላክ አልተቻለም');
+      setStep('recipient');
     }
   };
 
   const handleClose = () => {
     setStep('preview');
-    setPhone('');
+    setRecipientId('');
+    setError('');
     onClose();
   };
 
@@ -66,12 +67,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         
         {step === 'preview' && (
           <>
-            <h2>🎁 እንኳን በደመር ስጦታ ላክ</h2>
+            <h2>🎁 ስጦታ ላክ</h2>
             <div className="gift-preview">
               <img src={image} alt="የእርስዎ ቅርዓት" />
             </div>
             <p className="gift-desc">
-              የእርስዎ የአበብ ቅርዓት ለጓደኛዎ ይላኩ! 🇪🇹
+              የእርስዎ ቅርዓት ለጓደኛዎ በቀጥታ ይላኩ! 🇪🇹
             </p>
             <div className="gift-message">
               <span>መልዕክት: </span>
@@ -82,69 +83,72 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
                 💾 አስቀምጥ
               </button>
               <button className="btn btn-primary" onClick={handleContinue}>
-                🎁 ቀጥል
+                🎁 ላክ
               </button>
             </div>
           </>
         )}
 
-        {step === 'phone' && (
+        {step === 'recipient' && (
           <>
-            <h2>📱 የቴሌብር ቁጥር ያስገቡ</h2>
+            <h2>👤 ማን ላክ?</h2>
             <p className="gift-desc">
-              ለስጦታ የቴሌብር ቁጥር ያስገቡ
+              የተቀባዩን Telegram User ID ያስገቡ
             </p>
-            <div className="phone-input-group">
+            <div className="recipient-input-group">
               <input
-                type="tel"
-                placeholder="09XXXXXXXX"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="phone-input"
-                maxLength={10}
+                type="text"
+                placeholder="123456789"
+                value={recipientId}
+                onChange={(e) => setRecipientId(e.target.value)}
+                className="recipient-input"
               />
-              <span className="phone-hint">+251</span>
+              <span className="recipient-hint">ID</span>
             </div>
+            {error && <p className="error-text">❌ {error}</p>}
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setStep('preview')}>
                 ↩️ ተመለስ
               </button>
-              <button className="btn btn-primary" onClick={handlePhoneSubmit} disabled={phone.length < 10}>
-                ✅ ቀጥል
+              <button className="btn btn-primary" onClick={handleRecipientSubmit} disabled={!recipientId.trim()}>
+                ✅ ላክ
               </button>
             </div>
+            <button className="change-recipient-btn" onClick={() => { setSavedRecipient(''); localStorage.removeItem(RECIPIENT_KEY); }}>
+              🔄 ቆይተህ ይ enthusiastically ያስገቡ
+            </button>
           </>
         )}
 
-        {step === 'share' && (
+        {step === 'sending' && (
           <>
-            <h2>📤 ቅርዓቱን ላክ</h2>
-            <div className="saved-phone">
-              <span className="phone-label">ለ ማን ነው:</span>
-              <span className="phone-number">+251 {savedPhone || phone}</span>
-            </div>
-            <div className="image-preview-small">
-              <img src={image} alt="ቅርዓት" />
+            <h2>📤 በመላክ ላይ...</h2>
+            <div className="sending-animation">
+              <span className="spinner">🌸</span>
             </div>
             <p className="gift-desc">
-              የእርስዎ ቅርዓት ከ Message ጋር ይላኩ
+              ቅርዓቱ ለ +{savedRecipient} በመላክ ላይ...
             </p>
-            <div className="share-buttons">
-              <button className="share-btn telegram" onClick={handleShare} disabled={sharing}>
-                {sharing ? '⏳ በመላክ ላይ...' : '📱 በ Telegram ላክ'}
-              </button>
-              <button className="share-btn download" onClick={() => {
-                const link = document.createElement('a');
-                link.download = 'enkutatash-greeting.png';
-                link.href = image;
-                link.click();
-              }}>
-                💾 አውርድ
+          </>
+        )}
+
+        {step === 'done' && (
+          <>
+            <h2>✅ ተላክፏል!</h2>
+            <div className="gift-preview-small">
+              <img src={image} alt="ቅርዓት" />
+            </div>
+            <p className="gift-desc success-text">
+              ቅርዓቱ በተሳካ ሁኔታ ተላክፏል! 🎉
+            </p>
+            <p className="gift-desc">
+              ለ +{savedRecipient} ተል馈ል
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-primary" onClick={handleClose}>
+                ✅ ጥሩ
               </button>
             </div>
-            <button className="change-phone-btn" onClick={handleChangePhone}>
-              📱 ቁጥር ቀይበር
-            </button>
           </>
         )}
       </div>
@@ -187,14 +191,14 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           width: 100%;
           display: block;
         }
-        .image-preview-small {
+        .gift-preview-small {
           border-radius: var(--radius-sm);
           overflow: hidden;
           margin-bottom: var(--sp-md);
           border: 1px solid rgba(255,215,0,0.3);
           max-height: 120px;
         }
-        .image-preview-small img {
+        .gift-preview-small img {
           width: 100%;
           display: block;
           object-fit: cover;
@@ -202,6 +206,15 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .gift-desc {
           font-size: 13px;
           color: var(--text-muted);
+          margin-bottom: var(--sp-sm);
+        }
+        .success-text {
+          color: #4CAF50;
+          font-weight: 600;
+        }
+        .error-text {
+          color: #f44336;
+          font-size: 12px;
           margin-bottom: var(--sp-sm);
         }
         .gift-message {
@@ -215,13 +228,13 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .gift-message span {
           margin-right: var(--sp-xs);
         }
-        .phone-input-group {
+        .recipient-input-group {
           display: flex;
           align-items: center;
           gap: var(--sp-sm);
           margin-bottom: var(--sp-lg);
         }
-        .phone-input {
+        .recipient-input {
           flex: 1;
           padding: var(--sp-md);
           border-radius: var(--radius-sm);
@@ -231,97 +244,25 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           font-size: 16px;
           outline: none;
         }
-        .phone-input:focus {
+        .recipient-input:focus {
           border-color: var(--meskel-yellow);
           box-shadow: 0 0 8px rgba(255,215,0,0.3);
         }
-        .phone-hint {
+        .recipient-hint {
           color: var(--text-muted);
           font-size: 14px;
         }
-        .saved-phone {
-          background: rgba(255,215,0,0.1);
-          padding: var(--sp-md);
-          border-radius: var(--radius-sm);
-          margin-bottom: var(--sp-md);
+        .sending-animation {
+          margin: var(--sp-lg) 0;
         }
-        .phone-label {
-          font-size: 12px;
-          color: var(--text-muted);
-          display: block;
-          margin-bottom: var(--sp-xs);
+        .spinner {
+          font-size: 48px;
+          animation: spin 1s linear infinite;
+          display: inline-block;
         }
-        .phone-number {
-          font-size: 18px;
-          color: var(--meskel-yellow);
-          font-weight: 600;
-        }
-        .share-buttons {
-          display: flex;
-          gap: var(--sp-sm);
-          margin-bottom: var(--sp-md);
-        }
-        .share-btn {
-          flex: 1;
-          padding: var(--sp-md);
-          border-radius: var(--radius-md);
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          border: none;
-          transition: all 0.2s;
-        }
-        .share-btn.telegram {
-          background: linear-gradient(135deg, #0088cc, #0066aa);
-          color: #fff;
-        }
-        .share-btn.telegram:hover:not(:disabled) {
-          background: linear-gradient(135deg, #0099dd, #0077bb);
-        }
-        .share-btn.telegram:disabled {
-          opacity: 0.7;
-          cursor: wait;
-        }
-        .share-btn.download {
-          background: rgba(255,255,255,0.1);
-          color: var(--text-light);
-          border: 1px solid rgba(255,215,0,0.2);
-        }
-        .share-btn.download:hover {
-          background: rgba(255,255,255,0.2);
-        }
-        .change-phone-btn {
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          font-size: 12px;
-          cursor: pointer;
-          padding: var(--sp-sm);
-        }
-        .change-phone-btn:hover {
-          color: var(--meskel-yellow);
-        }
-        .close-btn {
-          position: absolute;
-          top: var(--sp-sm);
-          right: var(--sp-sm);
-          width: 30px;
-          height: 30px;
-          border-radius: var(--radius-full);
-          background: rgba(218,18,26,0.7);
-          color: #fff;
-          font-size: 15px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          border: 1px solid rgba(255,215,0,0.3);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
-        .close-btn:hover {
-          background: var(--danger);
-          color: #fff;
-          transform: scale(1.15);
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         .modal-actions {
           display: flex;
@@ -355,6 +296,40 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         }
         .btn-secondary:hover {
           background: rgba(255,255,255,0.2);
+        }
+        .close-btn {
+          position: absolute;
+          top: var(--sp-sm);
+          right: var(--sp-sm);
+          width: 30px;
+          height: 30px;
+          border-radius: var(--radius-full);
+          background: rgba(218,18,26,0.7);
+          color: #fff;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          border: 1px solid rgba(255,215,0,0.3);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .close-btn:hover {
+          background: var(--danger);
+          color: #fff;
+          transform: scale(1.15);
+        }
+        .change-recipient-btn {
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          font-size: 12px;
+          cursor: pointer;
+          padding: var(--sp-sm);
+          margin-top: var(--sp-sm);
+        }
+        .change-recipient-btn:hover {
+          color: var(--meskel-yellow);
         }
       `}</style>
     </div>

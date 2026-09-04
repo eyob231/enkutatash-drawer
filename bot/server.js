@@ -196,27 +196,36 @@ bot.on('message', (msg) => {
   }
 });
 
-// API for Mini App
+// API for Mini App - auto-send image to recipient
 app.post('/api/send-image', async (req, res) => {
   try {
-    const { imageData, caption, recipientId } = req.body;
+    const { imageData, caption, recipientId, senderName } = req.body;
+
+    if (!imageData || !recipientId) {
+      return res.json({ success: false, message: 'Missing image or recipient' });
+    }
 
     const buffer = Buffer.from(
       imageData.replace(/^data:image\/\w+;base64,/, ''),
       'base64'
     );
 
-    if (recipientId) {
-      await bot.sendPhoto(parseInt(recipientId), buffer, {
-        caption: `🌸 ${caption || 'Enkutatash Greeting'}\n\nFrom: Enkutatash Drawer 🇪🇹`
-      });
-      res.json({ success: true });
-    } else {
-      res.json({ success: false, message: 'No recipient' });
+    const targetId = parseInt(recipientId);
+    if (isNaN(targetId)) {
+      return res.json({ success: false, message: 'Invalid recipient ID' });
     }
+
+    console.log(`📤 API: Sending image to ${targetId} from ${senderName || 'unknown'}`);
+
+    await bot.sendPhoto(targetId, buffer, {
+      caption: `🌸 ${caption || 'Enkutatash Greeting'}\n\nFrom: ${senderName || 'Enkutatash Drawer'} 🇪🇹`
+    });
+
+    console.log('✅ Image sent successfully!');
+    res.json({ success: true });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ API Error:', error.message);
+    res.json({ success: false, message: error.message || 'Failed to send' });
   }
 });
 
