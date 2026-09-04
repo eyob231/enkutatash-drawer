@@ -85,21 +85,43 @@ function App() {
   }, [capturedImage, downloadImage]);
 
   const handleSendGift = useCallback(async (_phone: string, image: string) => {
-    // In Telegram Mini App, use the built-in sharing
+    // Try to send via bot API
     try {
-      // Open Telegram's inline mode to share the image
-      WebApp.switchInlineQuery('', ['users']);
+      const botApiUrl = 'https://enkutatash-bot.vercel.app/api/send-image';
       
-      showAlert('📱 በ Telegram ይምረጡ ማን ላክ እንደሆነ!');
+      const response = await fetch(botApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          imageData: image,
+          caption: '🌸 እንኳን በደመር ደህና መጡ!',
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showAlert('📱 ቅርዓቱ ተላክፏል!');
+      } else {
+        // Fallback: open Telegram inline mode
+        WebApp.switchInlineQuery('', ['users']);
+        showAlert('📱 በ Telegram ይምረጡ ማን ላክ!');
+      }
     } catch (err) {
       console.log('Share failed:', err);
-      // Fallback: download
-      downloadImage(image);
-      showAlert('💾 ቅር씌 ተፈጥሯል! በ Telegram ላክ ይሂዱ!');
+      // Fallback: open Telegram inline mode
+      try {
+        WebApp.switchInlineQuery('', ['users']);
+        showAlert('📱 በ Telegram ይምረጡ ማን ላክ!');
+      } catch (e) {
+        downloadImage(image);
+        showAlert('💾 ቅርዓቱ ተፈጥሯል! በ Telegram ላክ ይሂዱ!');
+      }
     }
     
     setShowGift(false);
-  }, [WebApp, showAlert, downloadImage]);
+  }, [WebApp, showAlert, downloadImage, user]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
