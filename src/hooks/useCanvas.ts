@@ -39,11 +39,11 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
     const canvas = getCanvas();
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // Return CSS pixel coordinates (not canvas pixel coordinates)
+    // because ctx.scale(dpr, dpr) is already applied
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     };
   }, [getCanvas]);
 
