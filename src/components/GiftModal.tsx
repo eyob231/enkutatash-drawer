@@ -1,61 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface GiftModalProps {
   isOpen: boolean;
   image: string | null;
   onClose: () => void;
-  onSend: (recipientId: string, image: string) => void;
+  onSend: (image: string) => void;
   onSave: () => void;
 }
 
-const RECIPIENT_KEY = 'enkutatash_recipient';
-
 export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
-  const [recipientId, setRecipientId] = useState('');
-  const [step, setStep] = useState<'preview' | 'recipient' | 'sending' | 'done'>('preview');
-  const [savedRecipient, setSavedRecipient] = useState('');
-
+  const [step, setStep] = useState<'preview' | 'sending' | 'done'>('preview');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const saved = localStorage.getItem(RECIPIENT_KEY);
-    if (saved) setSavedRecipient(saved);
-  }, []);
 
   if (!isOpen || !image) return null;
 
-  const handleContinue = () => {
-    if (savedRecipient) {
-      setStep('sending');
-      handleAutoSend(savedRecipient);
-    } else {
-      setStep('recipient');
-    }
-  };
-
-  const handleRecipientSubmit = () => {
-    if (recipientId.trim()) {
-      localStorage.setItem(RECIPIENT_KEY, recipientId.trim());
-      setSavedRecipient(recipientId.trim());
-      setStep('sending');
-      handleAutoSend(recipientId.trim());
-    }
-  };
-
-  const handleAutoSend = async (targetId: string) => {
+  const handleSend = async () => {
+    setStep('sending');
     setError('');
     try {
-      await onSend(targetId, image);
+      await onSend(image);
       setStep('done');
     } catch (err: any) {
       setError(err.message || 'መላክ አልተቻለም');
-      setStep('recipient');
+      setStep('preview');
     }
   };
 
   const handleClose = () => {
     setStep('preview');
-    setRecipientId('');
     setError('');
     onClose();
   };
@@ -78,45 +50,15 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
               <span>መልዕክት: </span>
               <em>"እንኳን በደመር ደህና መጡ! 🌸🌼🌺" </em>
             </div>
+            {error && <p className="error-text">❌ {error}</p>}
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={onSave}>
                 💾 አስቀምጥ
               </button>
-              <button className="btn btn-primary" onClick={handleContinue}>
-                🎁 ላክ
+              <button className="btn btn-primary" onClick={handleSend}>
+                📤 ማን ላክ?
               </button>
             </div>
-          </>
-        )}
-
-        {step === 'recipient' && (
-          <>
-            <h2>👤 ማን ላክ?</h2>
-            <p className="gift-desc">
-              የተቀባዩን Telegram User ID ያስገቡ
-            </p>
-            <div className="recipient-input-group">
-              <input
-                type="text"
-                placeholder="123456789"
-                value={recipientId}
-                onChange={(e) => setRecipientId(e.target.value)}
-                className="recipient-input"
-              />
-              <span className="recipient-hint">ID</span>
-            </div>
-            {error && <p className="error-text">❌ {error}</p>}
-            <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
-                ↩️ ተመለስ
-              </button>
-              <button className="btn btn-primary" onClick={handleRecipientSubmit} disabled={!recipientId.trim()}>
-                ✅ ላክ
-              </button>
-            </div>
-            <button className="change-recipient-btn" onClick={() => { setSavedRecipient(''); localStorage.removeItem(RECIPIENT_KEY); }}>
-              🔄 ቆይተህ ይ enthusiastically ያስገቡ
-            </button>
           </>
         )}
 
@@ -127,7 +69,10 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
               <span className="spinner">🌸</span>
             </div>
             <p className="gift-desc">
-              ቅርዓቱ ለ +{savedRecipient} በመላክ ላይ...
+              ቅርዓቱ በመ硭ተት ላይ...
+            </p>
+            <p className="gift-desc small">
+              የተቀባዩን ይምረጡ
             </p>
           </>
         )}
@@ -140,9 +85,6 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
             </div>
             <p className="gift-desc success-text">
               ቅርዓቱ በተሳካ ሁኔታ ተላክፏል! 🎉
-            </p>
-            <p className="gift-desc">
-              ለ +{savedRecipient} ተል馈ል
             </p>
             <div className="modal-actions">
               <button className="btn btn-primary" onClick={handleClose}>
@@ -208,6 +150,9 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           color: var(--text-muted);
           margin-bottom: var(--sp-sm);
         }
+        .gift-desc.small {
+          font-size: 11px;
+        }
         .success-text {
           color: #4CAF50;
           font-weight: 600;
@@ -227,30 +172,6 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         }
         .gift-message span {
           margin-right: var(--sp-xs);
-        }
-        .recipient-input-group {
-          display: flex;
-          align-items: center;
-          gap: var(--sp-sm);
-          margin-bottom: var(--sp-lg);
-        }
-        .recipient-input {
-          flex: 1;
-          padding: var(--sp-md);
-          border-radius: var(--radius-sm);
-          border: 1px solid rgba(255,215,0,0.3);
-          background: rgba(255,255,255,0.05);
-          color: var(--text-light);
-          font-size: 16px;
-          outline: none;
-        }
-        .recipient-input:focus {
-          border-color: var(--meskel-yellow);
-          box-shadow: 0 0 8px rgba(255,215,0,0.3);
-        }
-        .recipient-hint {
-          color: var(--text-muted);
-          font-size: 14px;
         }
         .sending-animation {
           margin: var(--sp-lg) 0;
@@ -313,23 +234,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           cursor: pointer;
           border: 1px solid rgba(255,215,0,0.3);
           box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          z-index: 10;
         }
         .close-btn:hover {
           background: var(--danger);
           color: #fff;
           transform: scale(1.15);
-        }
-        .change-recipient-btn {
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          font-size: 12px;
-          cursor: pointer;
-          padding: var(--sp-sm);
-          margin-top: var(--sp-sm);
-        }
-        .change-recipient-btn:hover {
-          color: var(--meskel-yellow);
         }
       `}</style>
     </div>

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const TelegramBot = require('node-telegram-bot-api');
+const crypto = require('crypto');
 
 require('dotenv').config();
 
@@ -18,9 +19,18 @@ if (!BOT_TOKEN) {
 console.log('🔑 Bot token loaded, length:', BOT_TOKEN.length);
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// In-memory storage
-const imageStorage = new Map();
-const pendingForwards = new Map();
+// Temporary image storage (imageId -> { buffer, caption, senderName, expires })
+const pendingImages = new Map();
+
+// Auto-cleanup old images (10 min expiry)
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, img] of pendingImages) {
+    if (now > img.expires) {
+      pendingImages.delete(id);
+    }
+  }
+}, 60000);
 
 console.log('🌸 Enkutatash Bot starting...');
 
@@ -31,11 +41,10 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(chatId,
     `🌸 እንኳን በደመር ደህና መጡ!\n\n` +
     `ሰላም ${name}!\n\n` +
-    `የእንኳን በደመር ማዕበል መሳፈሪያ ነው!\n\n` +
-    `📥 ቅርዓት ለማስቀምጥ: ቅርዓቱን ይላኩ!\n` +
+    `ከእንኳን በደመር ማዕበል ቅርዓት ይ relinquish!\n\n` +
+    `🎨 ከ Mini App ቅርዓት ይuemarı\n` +
     `📤 /send ቁጥር - ቅርዓት ላክ\n` +
     `📋 /list - ያስቀመጡትን ይመልከቱ\n` +
-    `🗑️ /delete ቁጥር - ቅርዓት ያጥፉ\n` +
     `❓ /help - እርዳታ`
   );
   console.log('🚀 /start from', msg.from?.id);
@@ -48,86 +57,65 @@ bot.onText(/\/help/, (msg) => {
     `1️⃣ ቅርዓት ለማስቀምጥ:\n` +
     `   ቅርዓቱን ይላኩ!\n\n` +
     `2️⃣ ቅርዓት ለማካፈል:\n` +
-    `   /send 1\n\n` +
+    `   /send ቁጥር\n\n` +
     `3️⃣ ያስቀመጡትን ለማየት:\n` +
-    `   /list\n\n` +
-    `4️⃣ ቅርዓት ለማጥፋት:\n` +
-    `   /delete 1`
+    `   /list`
   );
 });
 
 // /list
 bot.onText(/\/list/, (msg) => {
   const userId = msg.from?.id;
-  const images = imageStorage.get(userId) || [];
-  console.log('📋 /list from user:', userId, '- images:', images.length);
+  const userImages = [];
+  for (const [id, img] of pendingImages) {
+    if (img.senderId === userId) {
+      userImages.push({ id, ...img });
+    }
+  }
+  console.log('📋 /list from user:', userId, '- images:', userImages.length);
 
-  if (images.length === 0) {
+  if (userImages.length === 0) {
     bot.sendMessage(msg.chat.id,
-      '📋 ያስቀመጡት ቅርዓት የለም!\n\n📸 ቅርዓት ለማስቀምጥ ይላኩ!'
+      '📋 ያስቀመጡት ቅርዓት የለም!\n\n🎨 ከ Mini App ቅርዓት ይuemarı!'
     );
     return;
   }
 
   let text = '📋 ያስቀመጡት ቅርዓቶች:\n\n';
-  images.forEach((img, i) => {
+  userImages.forEach((img, i) => {
     text += `${i + 1}. ${img.caption}\n`;
-    text += `   📅 ${new Date(img.timestamp).toLocaleDateString()}\n\n`;
+    text += `   📅 ${new Date(img.created).toLocaleDateString()}\n\n`;
   });
-  text += 'ለማካፈል: /send ቁጥር';
 
   bot.sendMessage(msg.chat.id, text);
 });
 
-// /send
-bot.onText(/\/send(?:\s+(\d+))?/, (msg, match) => {
+// /send - manual send via bot
+bot.onText(/\/send(?:\s+(\S+))?/, (msg, match) => {
   const userId = msg.from?.id;
   const chatId = msg.chat.id;
-  const num = parseInt(match[1]) - 1;
+  const imageId = match[1];
 
-  const images = imageStorage.get(userId) || [];
-
-  if (images.length === 0) {
-    bot.sendMessage(chatId, '❌ ያስቀመጡት ቅርዓት የለም!');
+  if (!imageId) {
+    bot.sendMessage(chatId, '❌ /send <image_id>\n\n📋 /list የስስ ቁጥር ይመልከቱ');
     return;
   }
 
-  if (isNaN(num) || num < 0 || num >= images.length) {
-    bot.sendMessage(chatId,
-      `❌ ትክክለኛ ቁጥር ያስገቡ!\n\nየተገኙ: ${images.length}`
-    );
+  const img = pendingImages.get(imageId);
+  if (!img || img.senderId !== userId) {
+    bot.sendMessage(chatId, '❌ ቅርዓቱ አልተገኘም!');
     return;
   }
 
-  pendingForwards.set(userId, { image: images[num], step: 'waiting_id' });
+  // Store pending forward
+  if (!global.pendingForwards) global.pendingForwards = new Map();
+  global.pendingForwards.set(userId, { imageId, step: 'waiting_id' });
 
   bot.sendMessage(chatId,
     `📤 ማን ላክ?\n\n` +
-    `👤 የተቀባይ የተፅዕን ቁጥር ይላኩ\n` +
-    `💡 ወይም @username ይ镧ክ\n\n` +
+    `👤 የተቀባይ የተፅዕን ቁጥር ይላኩ\n\n` +
     `➡️ ለምሳሌ: 123456789`
   );
-});
-
-// /delete
-bot.onText(/\/delete(?:\s+(\d+))?/, (msg, match) => {
-  const userId = msg.from?.id;
-  const num = parseInt(match[1]) - 1;
-
-  const images = imageStorage.get(userId) || [];
-
-  if (images.length === 0) {
-    bot.sendMessage(msg.chat.id, '❌ ያስቀመጡት ቅርዓት የለም!');
-    return;
-  }
-
-  if (isNaN(num) || num < 0 || num >= images.length) {
-    bot.sendMessage(msg.chat.id, '❌ ትክክለኛ ቁጥር ያስገቡ!');
-    return;
-  }
-
-  images.splice(num, 1);
-  bot.sendMessage(msg.chat.id, '✅ ቅርዓቱ ጠፍቷል!');
 });
 
 // Handle ALL messages (photos + text replies)
@@ -135,42 +123,37 @@ bot.on('message', (msg) => {
   const userId = msg.from?.id;
   const chatId = msg.chat.id;
 
-  // Skip if it's a command (already handled by onText)
+  // Skip commands
   if (msg.text && msg.text.startsWith('/')) return;
 
-  // 1) Handle photos
+  // Handle photos sent directly to bot
   if (msg.photo && msg.photo.length > 0) {
     console.log('📸 Photo received from user:', userId);
     const photo = msg.photo[msg.photo.length - 1];
     const caption = msg.caption || 'Enkutatash Greeting 🌸';
-    console.log('📸 file_id:', photo.file_id);
 
-    if (!imageStorage.has(userId)) {
-      imageStorage.set(userId, []);
-    }
-
-    const images = imageStorage.get(userId);
-    const entry = {
+    const imageId = crypto.randomBytes(6).toString('hex');
+    pendingImages.set(imageId, {
       fileId: photo.file_id,
       caption: caption,
-      timestamp: new Date().toISOString(),
-      index: images.length + 1
-    };
-    images.push(entry);
-
-    console.log('✅ Image saved! Total for user:', images.length);
+      senderId: userId,
+      senderName: msg.from?.first_name || 'User',
+      created: new Date().toISOString(),
+      expires: Date.now() + 600000
+    });
 
     bot.sendMessage(chatId,
       `✅ ቅርዓቱ ተቀምጧል!\n\n` +
-      `📋 ቁጥር: ${entry.index}\n` +
+      `🔑 ID: ${imageId}\n` +
       `💬 መልዕክት: ${caption}\n\n` +
-      `ለማካፈል: /send ${entry.index}`
+      `ለማካፈል: /send ${imageId}`
     );
     return;
   }
 
-  // 2) Handle pending forward reply
-  const pending = pendingForwards.get(userId);
+  // Handle pending forward reply
+  if (!global.pendingForwards) global.pendingForwards = new Map();
+  const pending = global.pendingForwards.get(userId);
   if (pending && pending.step === 'waiting_id' && msg.text && !msg.text.startsWith('/')) {
     const target = msg.text.replace('@', '').trim();
 
@@ -179,24 +162,132 @@ bot.on('message', (msg) => {
       return;
     }
 
-    bot.sendPhoto(parseInt(target), pending.image.fileId, {
-      caption: `🌸 ${pending.image.caption}\n\nFrom: Enkutatash Drawer 🇪🇹`
+    const img = pendingImages.get(pending.imageId);
+    if (!img) {
+      bot.sendMessage(chatId, '❌ ቅርዓቱ ጊዜው ዘልቷል!');
+      global.pendingForwards.delete(userId);
+      return;
+    }
+
+    bot.sendPhoto(parseInt(target), img.fileId, {
+      caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
     }).then(() => {
       bot.sendMessage(chatId, '✅ ቅርዓቱ ተላክፏል! 🎉');
-      pendingForwards.delete(userId);
+      global.pendingForwards.delete(userId);
     }).catch((err) => {
-      console.error('Send error:', err);
+      console.error('Send error:', err.message);
       bot.sendMessage(chatId,
         `❌ መላክ አልተቻለም!\n\n` +
         `💡 ተቀባይ Bot ላይ /start እንዲያደርግ ያስገብጉ!\n` +
-        `❌ ${err.message || err}`
+        `❌ ${err.message}`
       );
     });
     return;
   }
 });
 
-// API for Mini App - auto-send image to recipient
+// ===== INLINE QUERY HANDLER =====
+// When user picks a contact via switchInlineQuery, bot sends the image
+bot.on('inline_query', async (query) => {
+  const userId = query.from?.id;
+  const queryText = query.query.trim();
+
+  console.log(`📤 Inline query from ${userId}: "${queryText}"`);
+
+  if (!queryText) {
+    // Show user's stored images as inline results
+    const userImages = [];
+    for (const [id, img] of pendingImages) {
+      if (img.senderId === userId) {
+        userImages.push({ id, ...img });
+      }
+    }
+
+    if (userImages.length === 0) {
+      return bot.answerInlineQuery(query.id, [{
+        type: 'article',
+        id: 'none',
+        title: '🎨 ቅርዓት ያድርጉ',
+        description: 'ቀጥል በ Mini App ቅርዓት ይuemarı',
+        input_message_content: {
+          message_text: '🌸 እንኳን በደመር ደህና መጡ! ቅርዓት ይuemarı!'
+        }
+      }]);
+    }
+
+    const results = userImages.map((img) => ({
+      type: 'photo',
+      id: img.id,
+      photo_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
+      thumb_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
+      caption: `🌸 ${img.caption}\n\nFrom: Enkutatash Drawer 🇪🇹`,
+      parse_mode: 'HTML'
+    }));
+
+    return bot.answerInlineQuery(query.id, results, { cache_time: 0 });
+  }
+
+  // If query contains an imageId, send that image
+  const img = pendingImages.get(queryText);
+  if (img) {
+    const results = [{
+      type: 'photo',
+      id: queryText,
+      photo_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
+      thumb_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
+      caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
+    }];
+    return bot.answerInlineQuery(query.id, results, { cache_time: 0 });
+  }
+
+  bot.answerInlineQuery(query.id, [{
+    type: 'article',
+    id: 'notfound',
+    title: '❌ ቅርዓቱ አልተገኘም',
+    description: 'ለተሳካ ሁኔታ ከ Mini App ይuemarı',
+    input_message_content: {
+      message_text: '❌ ቅርዓቱ አልተገኘም'
+    }
+  }]);
+});
+
+// ===== API for Mini App =====
+
+// Upload image and get an ID for inline sharing
+app.post('/api/upload-image', (req, res) => {
+  try {
+    const { imageData, caption, senderName, senderId } = req.body;
+
+    if (!imageData) {
+      return res.json({ success: false, message: 'No image data' });
+    }
+
+    const buffer = Buffer.from(
+      imageData.replace(/^data:image\/\w+;base64,/, ''),
+      'base64'
+    );
+
+    const imageId = crypto.randomBytes(6).toString('hex');
+
+    pendingImages.set(imageId, {
+      buffer: buffer,
+      caption: caption || 'Enkutatash Greeting 🌸',
+      senderName: senderName || 'Enkutatash Drawer',
+      senderId: senderId,
+      created: new Date().toISOString(),
+      expires: Date.now() + 600000 // 10 minutes
+    });
+
+    console.log(`📤 Image uploaded: ${imageId} from ${senderName}`);
+
+    res.json({ success: true, imageId: imageId });
+  } catch (error) {
+    console.error('Upload error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Direct send via API (for bot commands)
 app.post('/api/send-image', async (req, res) => {
   try {
     const { imageData, caption, recipientId, senderName } = req.body;
@@ -230,7 +321,7 @@ app.post('/api/send-image', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', bot: 'Enkutatash Bot 🌸' });
+  res.json({ status: 'ok', bot: 'Enkutatash Bot 🌸', pendingImages: pendingImages.size });
 });
 
 const PORT = process.env.PORT || 3001;

@@ -16,7 +16,7 @@ function App() {
   const [showTip, setShowTip] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
-  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user } = useTelegram();
+  const { toggleMainButton, hideMainButton, toggleBackButton, showAlert, user, WebApp } = useTelegram();
 
   const {
     drawState,
@@ -86,27 +86,45 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
-  const handleSendGift = useCallback(async (recipientId: string, image: string) => {
-    // Send image to backend API which forwards via Telegram Bot
-    const response = await fetch(`${BOT_API_URL}/api/send-image`, {
+  const handleSendGift = useCallback(async (image: string) => {
+    // Step 1: Upload image to backend, get an imageId
+    const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipientId: recipientId,
         imageData: image,
         caption: '🌸 እንኳን በደመር ደህና መጡ!',
-        senderName: user?.first_name || ' Arkadaş',
+        senderName: user?.first_name || 'Enkutatash Drawer',
+        senderId: user?.id,
       }),
     });
 
-    const result = await response.json();
+    const uploadResult = await uploadRes.json();
 
-    if (!result.success) {
-      throw new Error(result.message || 'መላክ አልተቻለም');
+    if (!uploadResult.success) {
+      throw new Error(uploadResult.message || 'Upload failed');
     }
-    
-    setShowGift(false);
-  }, [user]);
+
+    const imageId = uploadResult.imageId;
+    console.log('📤 Image uploaded:', imageId);
+
+    // Step 2: Open Telegram contact picker via switchInlineQuery
+    // The bot's inline_query handler will pick up the imageId and show the image
+    try {
+      WebApp.switchInlineQuery(imageId, ['users']);
+      setShowGift(false);
+    } catch (err) {
+      console.log('switchInlineQuery failed, trying fallback:', err);
+      // Fallback: try with empty query to open contact picker
+      try {
+        WebApp.switchInlineQuery('', ['users']);
+        showAlert(`📱 በኋላ ስም ${imageId} ይ federate!`);
+        setShowGift(false);
+      } catch (e) {
+        throw new Error('ይቅርታ - የ接触 ማረፊያ አይ.open አይችልም');
+      }
+    }
+  }, [WebApp, user]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
