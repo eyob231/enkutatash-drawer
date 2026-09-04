@@ -4,7 +4,7 @@ interface GiftModalProps {
   isOpen: boolean;
   image: string | null;
   onClose: () => void;
-  onSend: (phone: string) => void;
+  onSend: (phone: string, image: string) => void;
   onSave: () => void;
 }
 
@@ -15,29 +15,23 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
   const [step, setStep] = useState<'preview' | 'phone' | 'share'>('preview');
   const [savedPhone, setSavedPhone] = useState('');
 
-  // Load saved phone from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(PHONE_KEY);
-    if (saved) {
-      setSavedPhone(saved);
-    }
+    if (saved) setSavedPhone(saved);
   }, []);
 
   if (!isOpen || !image) return null;
 
   const handleContinue = () => {
     if (savedPhone) {
-      // User has saved phone, go directly to share
       setStep('share');
     } else {
-      // No saved phone, ask for it
       setStep('phone');
     }
   };
 
   const handlePhoneSubmit = () => {
     if (phone.length >= 10) {
-      // Save to localStorage
       localStorage.setItem(PHONE_KEY, phone);
       setSavedPhone(phone);
       setStep('share');
@@ -50,7 +44,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
   };
 
   const handleShare = () => {
-    onSend(savedPhone || phone);
+    onSend(savedPhone || phone, image);
   };
 
   const handleClose = () => {
@@ -118,23 +112,28 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
 
         {step === 'share' && (
           <>
-            <h2>📤 ለማካፈል ይምረጡ</h2>
+            <h2>📤 ቅርዓቱን ላክ</h2>
             <div className="saved-phone">
-              <span className="phone-label">የ ቴሌብር ቁጥር:</span>
+              <span className="phone-label">ለ ማን ነው:</span>
               <span className="phone-number">+251 {savedPhone || phone}</span>
             </div>
+            <div className="image-preview-small">
+              <img src={image} alt="ቅርዓት" />
+            </div>
             <p className="gift-desc">
-              ቅርዓቱን ለማካፈል ይምረጡ
+              የእርስዎ ቅርዓት ከ Message ጋር ይላኩ
             </p>
             <div className="share-buttons">
               <button className="share-btn telegram" onClick={handleShare}>
-                📱 Telegram ላክ
+                📱 በ Telegram ላክ
               </button>
-              <button className="share-btn copy" onClick={() => {
-                navigator.clipboard?.writeText(`+251${savedPhone || phone}`);
-                alert('📞 ቁጥር ተቋቁሟል!');
+              <button className="share-btn download" onClick={() => {
+                const link = document.createElement('a');
+                link.download = 'enkutatash-greeting.png';
+                link.href = image;
+                link.click();
               }}>
-                📋 ቁጥር ቋጥር
+                💾 አውርድ
               </button>
             </div>
             <button className="change-phone-btn" onClick={handleChangePhone}>
@@ -163,6 +162,8 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
           position: relative;
           text-align: center;
           box-shadow: 0 0 24px rgba(255,215,0,0.2);
+          max-height: 90vh;
+          overflow-y: auto;
         }
         .modal-content h2 {
           font-size: 18px;
@@ -179,6 +180,18 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .gift-preview img {
           width: 100%;
           display: block;
+        }
+        .image-preview-small {
+          border-radius: var(--radius-sm);
+          overflow: hidden;
+          margin-bottom: var(--sp-md);
+          border: 1px solid rgba(255,215,0,0.3);
+          max-height: 120px;
+        }
+        .image-preview-small img {
+          width: 100%;
+          display: block;
+          object-fit: cover;
         }
         .gift-desc {
           font-size: 13px;
@@ -259,12 +272,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         .share-btn.telegram:hover {
           background: linear-gradient(135deg, #0099dd, #0077bb);
         }
-        .share-btn.copy {
+        .share-btn.download {
           background: rgba(255,255,255,0.1);
           color: var(--text-light);
           border: 1px solid rgba(255,215,0,0.2);
         }
-        .share-btn.copy:hover {
+        .share-btn.download:hover {
           background: rgba(255,255,255,0.2);
         }
         .change-phone-btn {

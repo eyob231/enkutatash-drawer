@@ -78,17 +78,20 @@ function App() {
     link.click();
   }, [capturedImage]);
 
-  const handleSendGift = useCallback((phone: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const handleSendGift = useCallback((phone: string, image: string) => {
+    // Convert base64 image to blob and download
+    const link = document.createElement('a');
+    link.download = 'enkutatash-greeting.png';
+    link.href = image;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
-    // In Telegram, use the native share
-    // In browser, open Telegram share URL
-    const telegramShareUrl = `https://t.me/share/url?url=https://enkutatash.app&text=🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ!`;
+    // Open Telegram to share
+    const telegramUrl = `https://t.me/share/url?url=https://enkutatash.app&text=🌸 እንኳን በደመር ደህና መጡ! የእርስዎ የአበብ ቅርዓት ይመልከቱ! ስጦታ ላክ ለ ${phone}`;
+    window.open(telegramUrl, '_blank');
     
-    // Open Telegram share dialog
-    window.open(telegramShareUrl, '_blank');
-    
-    showAlert(`📱 የቴሌብር ቁጥር: ${cleanPhone}\n\nTelegram ላክ ተከፍቧል!`);
+    showAlert('📱 ቅርዓቱ ተፈጥሯል! \n\nበ Telegram ላክ ወደ ጓደኛዎ ይላኩ!');
     setShowGift(false);
   }, [showAlert]);
 
