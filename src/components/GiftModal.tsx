@@ -6,48 +6,28 @@ interface GiftModalProps {
   onClose: () => void;
   onSend: (image: string) => void;
   onSave: () => void;
-  onSendByUsername?: (image: string, username: string) => Promise<void>;
 }
 
-export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUsername }: GiftModalProps) {
-  const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'username'>('preview');
-  const [error, setError] = useState('');
-  const [username, setUsername] = useState('');
+export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
+  const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'error'>('preview');
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen || !image) return null;
 
-  const handlePickContact = async () => {
+  const handleSend = async () => {
     setStep('sending');
-    setError('');
+    setErrorMsg('');
     try {
       await onSend(image);
-      // If onSend succeeds without throwing, the contact picker opened
     } catch (err: any) {
-      // switchInlineQuery failed — show username input as fallback
-      console.log('switchInlineQuery failed, showing username input');
-      setStep('username');
-    }
-  };
-
-  const handleUsernameSend = async () => {
-    if (!username.trim()) return;
-    setStep('sending');
-    setError('');
-    try {
-      if (onSendByUsername) {
-        await onSendByUsername(image, username.trim());
-      }
-      setStep('done');
-    } catch (err: any) {
-      setError(err.message || 'መላክ አልተቻለም');
-      setStep('username');
+      setErrorMsg(err.message || 'Failed to open contact picker');
+      setStep('error');
     }
   };
 
   const handleClose = () => {
     setStep('preview');
-    setUsername('');
-    setError('');
+    setErrorMsg('');
     onClose();
   };
 
@@ -60,52 +40,19 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           <>
             <h2>🎁 ስጦታ ላክ</h2>
             <div className="gift-preview">
-              <img src={image} alt="የእርስዎ ቅርዓት" />
+              <img src={image} alt="Your drawing" />
             </div>
             <p className="gift-desc">
               የእርስዎ ቅርዓት ለጓደኛዎ በቀጥታ ይላኩ! 🇪🇹
             </p>
             <div className="gift-message">
-              <span>መልዕክት: </span>
               <em>"እንኳን በደመር ደህና መጡ! 🌸🌼🌺" </em>
             </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={onSave}>
                 💾 አስቀምጥ
               </button>
-              <button className="btn btn-primary" onClick={handlePickContact}>
-                📤 ማን ላክ?
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === 'username' && (
-          <>
-            <h2>👤 የተቀባይ ያስገቡ</h2>
-            <p className="gift-desc">
-              የተቀባዩን Telegram username ያስገቡ
-            </p>
-            <div className="username-input-group">
-              <span className="at-sign">@</span>
-              <input
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.replace('@', ''))}
-                className="username-input"
-                autoFocus
-              />
-            </div>
-            {error && <p className="error-text">❌ {error}</p>}
-            <p className="gift-desc small">
-              💡 ተቀባይ በቅድሚያ Bot ላይ /start እንዲያደርግ ያስገብጉ!
-            </p>
-            <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
-                ↩️ ተመለስ
-              </button>
-              <button className="btn btn-primary" onClick={handleUsernameSend} disabled={!username.trim()}>
+              <button className="btn btn-primary" onClick={handleSend}>
                 📤 ላክ
               </button>
             </div>
@@ -119,7 +66,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
               <span className="spinner">🌸</span>
             </div>
             <p className="gift-desc">
-              ቅርዓቱ በመ硭ተት ላይ...
+              የተቀባዩን ይምረጡ...
             </p>
           </>
         )}
@@ -128,15 +75,26 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           <>
             <h2>✅ ተላክፏል!</h2>
             <div className="gift-preview-small">
-              <img src={image} alt="ቅርዓት" />
+              <img src={image} alt="Drawing" />
             </div>
             <p className="gift-desc success-text">
-              ቅርዓቱ በተሳካ ሁኔታ ተላክፏል! 🎉
+              ቅርዓቱ ተላክፏል! 🎉
             </p>
             <div className="modal-actions">
-              <button className="btn btn-primary" onClick={handleClose}>
-                ✅ ጥሩ
+              <button className="btn btn-primary" onClick={handleClose}>✅ ጥሩ</button>
+            </div>
+          </>
+        )}
+
+        {step === 'error' && (
+          <>
+            <h2>❌ ስህተት</h2>
+            <p className="gift-desc error-text">{errorMsg}</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                ↩️ ተመለስ
               </button>
+              <button className="btn btn-primary" onClick={handleClose}>✅ ጥሩ</button>
             </div>
           </>
         )}
@@ -176,10 +134,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           border: 2px solid rgba(255,215,0,0.6);
           box-shadow: 0 0 12px rgba(255,215,0,0.3);
         }
-        .gift-preview img {
-          width: 100%;
-          display: block;
-        }
+        .gift-preview img { width: 100%; display: block; }
         .gift-preview-small {
           border-radius: var(--radius-sm);
           overflow: hidden;
@@ -187,28 +142,10 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           border: 1px solid rgba(255,215,0,0.3);
           max-height: 120px;
         }
-        .gift-preview-small img {
-          width: 100%;
-          display: block;
-          object-fit: cover;
-        }
-        .gift-desc {
-          font-size: 13px;
-          color: var(--text-muted);
-          margin-bottom: var(--sp-sm);
-        }
-        .gift-desc.small {
-          font-size: 11px;
-        }
-        .success-text {
-          color: #4CAF50;
-          font-weight: 600;
-        }
-        .error-text {
-          color: #f44336;
-          font-size: 12px;
-          margin-bottom: var(--sp-sm);
-        }
+        .gift-preview-small img { width: 100%; display: block; object-fit: cover; }
+        .gift-desc { font-size: 13px; color: var(--text-muted); margin-bottom: var(--sp-sm); }
+        .success-text { color: #4CAF50; font-weight: 600; }
+        .error-text { color: #f44336; font-size: 13px; }
         .gift-message {
           font-size: 13px;
           color: var(--meskel-yellow);
@@ -217,60 +154,15 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           background: rgba(255,215,0,0.1);
           border-radius: var(--radius-sm);
         }
-        .gift-message span {
-          margin-right: var(--sp-xs);
-        }
-        .username-input-group {
-          display: flex;
-          align-items: center;
-          gap: var(--sp-sm);
-          margin-bottom: var(--sp-md);
-          background: rgba(255,255,255,0.05);
-          border-radius: var(--radius-sm);
-          border: 1px solid rgba(255,215,0,0.3);
-          padding: var(--sp-sm) var(--sp-md);
-        }
-        .username-input-group:focus-within {
-          border-color: var(--meskel-yellow);
-          box-shadow: 0 0 8px rgba(255,215,0,0.3);
-        }
-        .at-sign {
-          color: var(--meskel-yellow);
-          font-size: 16px;
-          font-weight: 600;
-        }
-        .username-input {
-          flex: 1;
-          background: transparent;
-          border: none;
-          color: var(--text-light);
-          font-size: 16px;
-          outline: none;
-          padding: var(--sp-sm) 0;
-        }
-        .sending-animation {
-          margin: var(--sp-lg) 0;
-        }
+        .sending-animation { margin: var(--sp-lg) 0; }
         .spinner {
           font-size: 48px;
           animation: spin 1s linear infinite;
           display: inline-block;
         }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .modal-actions {
-          display: flex;
-          gap: var(--sp-sm);
-        }
-        .btn {
-          flex: 1;
-          padding: var(--sp-md);
-          border-radius: var(--radius-md);
-          font-size: 14px;
-          font-weight: 600;
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .modal-actions { display: flex; gap: var(--sp-sm); }
+        .btn { flex: 1; padding: var(--sp-md); border-radius: var(--radius-md); font-size: 14px; font-weight: 600; }
         .btn-primary {
           background: linear-gradient(135deg, #FFD700, #E6C200);
           color: #000;
@@ -281,18 +173,13 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           background: linear-gradient(135deg, #FFE44D, #FFD700);
           box-shadow: 0 0 16px rgba(255,215,0,0.5);
         }
-        .btn-primary:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
           background: rgba(255,255,255,0.1);
           color: #f5f0e0;
           border: 1px solid rgba(255,215,0,0.2);
         }
-        .btn-secondary:hover {
-          background: rgba(255,255,255,0.2);
-        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
         .close-btn {
           position: absolute;
           top: var(--sp-sm);
@@ -311,11 +198,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           box-shadow: 0 2px 8px rgba(0,0,0,0.4);
           z-index: 10;
         }
-        .close-btn:hover {
-          background: var(--danger);
-          color: #fff;
-          transform: scale(1.15);
-        }
+        .close-btn:hover { background: var(--danger); color: #fff; transform: scale(1.15); }
       `}</style>
     </div>
   );
