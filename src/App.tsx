@@ -229,6 +229,7 @@ function App() {
         onSend={handleSendGift}
         onSave={handleSaveImage}
         onOpenChat={handleOpenChat}
+        previewNote={!user ? 'Preview mode: the contact picker only appears inside the Telegram app. Open @testnewnew3_bot in Telegram to test sending.' : undefined}
       />
       <TipModal
         isOpen={showTip}

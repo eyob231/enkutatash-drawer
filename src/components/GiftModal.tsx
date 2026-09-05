@@ -7,9 +7,10 @@ interface GiftModalProps {
   onSend: (image: string) => Promise<void>;
   onSave: () => void;
   onOpenChat: () => void;
+  previewNote?: string;
 }
 
-export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }: GiftModalProps) {
+export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat, previewNote }: GiftModalProps) {
   const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'error'>('preview');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -93,6 +94,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }
                 📩 ቻት ክፈት
               </button>
             </div>
+            {previewNote && <p className="preview-note">{previewNote}</p>}
           </>
         )}
 
@@ -155,6 +157,15 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }
         .gift-preview-small img { width: 100%; display: block; object-fit: cover; }
         .gift-desc { font-size: 13px; color: var(--text-muted); margin-bottom: var(--sp-sm); }
         .success-text { color: #4CAF50; font-weight: 600; }
+        .preview-note {
+          margin-top: var(--sp-md);
+          font-size: 11px;
+          color: var(--text-muted);
+          background: rgba(255,255,255,0.05);
+          padding: var(--sp-sm);
+          border-radius: var(--radius-sm);
+          line-height: 1.4;
+        }
         .error-text { color: #f44336; font-size: 13px; }
         .gift-message {
           font-size: 13px;
