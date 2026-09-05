@@ -46,7 +46,7 @@ npx gh-pages -d dist
 1. Open Telegram and search for `@BotFather`
 2. Send `/newbot`
 3. Choose a name: `Enkutatash Drawer Bot`
-4. Choose a username: `enkutatash_drawer_bot`
+4. Choose a username: `testnewnew3_bot`
 5. Save the bot token
 
 ### 2. Configure Bot Commands

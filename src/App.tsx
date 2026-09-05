@@ -113,11 +113,11 @@ function App() {
 
     // Step 2: Remember the link that opens the bot chat and delivers this
     // exact card, so the kid can simply tap forward ↗️ to share it.
-    forwardLinkRef.current = `https://t.me/enkutatash_drawer_bot?start=send_${imageId}`;
+    forwardLinkRef.current = `https://t.me/testnewnew3_bot?start=send_${imageId}`;
   }, [user]);
 
   const handleOpenChat = useCallback(() => {
-    const url = forwardLinkRef.current ?? 'https://t.me/enkutatash_drawer_bot';
+    const url = forwardLinkRef.current ?? 'https://t.me/testnewnew3_bot';
     try {
       WebApp.openTelegramLink(url);
     } catch (e) {

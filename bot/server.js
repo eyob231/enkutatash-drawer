@@ -60,7 +60,11 @@ bot.onText(/\/start(?: (.+))?/, (msg, match) => {
 
     return sendPromise
       .then(() => bot.sendMessage(chatId,
-        '↗️ አስተላልፈው ለጓደኛዎ ይላኩ!'
+        '🎉 ቅርዓትዎ ተዘጋጅቷል!\n\n' +
+        '📤 ለጓደኛዎ ለመላክ:\n' +
+        '1️⃣ በምስሉ ላይ ይንኩ\n' +
+        '2️⃣ ↗️ አስተላልፍ (Forward) ይንኩ\n' +
+        '3️⃣ ጓደኛዎን ይምረጡ! 🌸'
       ))
       .catch((e) => {
         console.error('❌ Failed to deliver card:', e.message);
