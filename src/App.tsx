@@ -111,20 +111,45 @@ function App() {
     const imageId = uploadResult.imageId;
     console.log('📤 Image uploaded:', imageId);
 
-    // Step 2: Send directly — open Telegram's friend picker right inside the
-    // mini app. The kid taps a friend and the bot delivers the card to them.
-    try {
-      WebApp.switchInlineQuery(imageId, ['users']);
-      setShowGift(false); // Telegram is now showing the friend picker
-      return;
-    } catch (err) {
-      console.log('Direct send unavailable, falling back to forward:', err);
+    // Step 2: Native share dialog (Bot API 8.0+) — the bot saves the card as a
+    // prepared inline message, then Telegram opens its own contact picker right
+    // inside the mini app. Kid taps Send → picks a friend → it's sent.
+    if (user?.id) {
+      try {
+        const prepareRes = await fetch(`${BOT_API_URL}/api/prepare-message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageId, userId: user.id }),
+        });
+        const prepareResult = await prepareRes.json();
+        if (prepareResult.success) {
+          WebApp.shareMessage(prepareResult.messageId, (shared) => {
+            if (shared) {
+              showAlert('✅ ቅርዓትዎ ተላከ! 🎉');
+            }
+          });
+          setShowGift(false); // Telegram's share dialog is now open
+          return;
+        }
+        console.log('prepare-message failed:', prepareResult.message);
+      } catch (err) {
+        console.log('shareMessage unavailable, trying inline picker:', err);
+      }
     }
 
-    // Step 3 (fallback): Deliver the card to the user's own chat with the bot
+    // Step 3: Older picker — open Telegram's chat selector via switchInlineQuery.
+    try {
+      WebApp.switchInlineQuery(imageId, ['users']);
+      setShowGift(false); // Telegram is now showing the chat selector
+      return;
+    } catch (err) {
+      console.log('Direct picker unavailable, falling back to forward:', err);
+    }
+
+    // Step 4 (fallback): Deliver the card to the user's own chat with the bot
     // so they can tap forward ↗️ to share it with a friend instead.
     forwardLinkRef.current = `https://t.me/testnewnew3_bot?start=send_${imageId}`;
-  }, [WebApp, user]);
+  }, [WebApp, user, showAlert]);
 
   const handleOpenChat = useCallback(() => {
     const url = forwardLinkRef.current ?? 'https://t.me/testnewnew3_bot';

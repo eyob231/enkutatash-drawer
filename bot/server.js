@@ -279,6 +279,53 @@ app.post('/api/upload-image', (req, res) => {
   }
 });
 
+// Save the card as a prepared inline message so the Mini App can open
+// Telegram's native share dialog (contact picker) via WebApp.shareMessage.
+app.post('/api/prepare-message', async (req, res) => {
+  try {
+    const { imageId, userId } = req.body;
+
+    if (!imageId || !userId) {
+      return res.json({ success: false, message: 'Missing imageId or userId' });
+    }
+
+    const img = pendingImages.get(imageId);
+    if (!img) {
+      return res.json({ success: false, message: 'Image not found or expired' });
+    }
+
+    const photoUrl = img.fileId
+      ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`
+      : `${getBaseUrl()}/api/image/${img.id}`;
+
+    const result = {
+      type: 'photo',
+      id: imageId,
+      photo_url: photoUrl,
+      thumb_url: photoUrl,
+      caption: `🌸 ${img.caption || 'እንኳን በደመር ደህና መጡ!'}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
+    };
+
+    // savePreparedInlineMessage is not in this library version, call the API directly
+    const prepared = await bot._request('savePreparedInlineMessage', {
+      json: {
+        user_id: userId,
+        result: result,
+        allow_user_chats: true,
+        allow_bot_chats: true,
+        allow_group_chats: true,
+        allow_channel_chats: true
+      }
+    });
+
+    console.log(`✅ Prepared message for user ${userId}:`, prepared.id);
+    res.json({ success: true, messageId: prepared.id });
+  } catch (error) {
+    console.error('❌ prepare-message error:', error.message);
+    res.json({ success: false, message: error.message || 'Failed to prepare message' });
+  }
+});
+
 // Send image to a user by username
 app.post('/api/send-by-username', async (req, res) => {
   try {
