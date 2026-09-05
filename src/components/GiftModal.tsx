@@ -4,13 +4,15 @@ interface GiftModalProps {
   isOpen: boolean;
   image: string | null;
   onClose: () => void;
-  onSend: (image: string) => void;
+  onSend: (image: string) => Promise<void>;
   onSave: () => void;
+  onSendByUsername: (image: string, recipientUsername: string) => Promise<void>;
 }
 
-export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
-  const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'error'>('preview');
+export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUsername }: GiftModalProps) {
+  const [step, setStep] = useState<'preview' | 'sending' | 'username' | 'done' | 'error'>('preview');
   const [errorMsg, setErrorMsg] = useState('');
+  const [recipientUsername, setRecipientUsername] = useState('');
 
   if (!isOpen || !image) return null;
 
@@ -20,8 +22,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
     try {
       await onSend(image);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to open contact picker');
-      setStep('error');
+      if (err.message === 'contact_picker_unavailable') {
+        setStep('username');
+      } else {
+        setErrorMsg(err.message || 'Failed to open contact picker');
+        setStep('error');
+      }
     }
   };
 
@@ -53,6 +59,45 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
                 💾 አስቀምጥ
               </button>
               <button className="btn btn-primary" onClick={handleSend}>
+                📤 ላክ
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'username' && (
+          <>
+            <h2>👤 ተጠቃሚ ያስገቡ</h2>
+            <p className="gift-desc">
+              Contact picker አልተከፈተም። የተቀባዩን ቃላቸውን ያስገቡ:
+            </p>
+            <input
+              type="text"
+              className="username-input"
+              placeholder="@username"
+              value={recipientUsername}
+              onChange={(e) => setRecipientUsername(e.target.value)}
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                ↩️ ተመለስ
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!recipientUsername.trim()}
+                onClick={async () => {
+                  setStep('sending');
+                  setErrorMsg('');
+                  try {
+                    await onSendByUsername(image!, recipientUsername.trim().replace('@', ''));
+                    setStep('done');
+                  } catch (err: any) {
+                    setErrorMsg(err.message || 'Failed to send');
+                    setStep('error');
+                  }
+                }}
+              >
                 📤 ላክ
               </button>
             </div>
@@ -162,6 +207,23 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .modal-actions { display: flex; gap: var(--sp-sm); }
+        .username-input {
+          width: 100%;
+          padding: var(--sp-md);
+          border-radius: var(--radius-md);
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,215,0,0.4);
+          color: var(--text);
+          font-size: 14px;
+          text-align: center;
+          margin-bottom: var(--sp-md);
+          outline: none;
+        }
+        .username-input:focus {
+          border-color: var(--meskel-yellow);
+          box-shadow: 0 0 8px rgba(255,215,0,0.3);
+        }
+        .username-input::placeholder { color: var(--text-muted); }
         .btn { flex: 1; padding: var(--sp-md); border-radius: var(--radius-md); font-size: 14px; font-weight: 600; }
         .btn-primary {
           background: linear-gradient(135deg, #FFD700, #E6C200);
