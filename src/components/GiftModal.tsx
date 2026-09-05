@@ -6,28 +6,47 @@ interface GiftModalProps {
   onClose: () => void;
   onSend: (image: string) => void;
   onSave: () => void;
+  onSendByUsername?: (image: string, username: string) => Promise<void>;
 }
 
-export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalProps) {
-  const [step, setStep] = useState<'preview' | 'sending' | 'done'>('preview');
+export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUsername }: GiftModalProps) {
+  const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'username'>('preview');
   const [error, setError] = useState('');
+  const [username, setUsername] = useState('');
 
   if (!isOpen || !image) return null;
 
-  const handleSend = async () => {
+  const handlePickContact = async () => {
     setStep('sending');
     setError('');
     try {
       await onSend(image);
+      // If onSend succeeds without throwing, the contact picker opened
+    } catch (err: any) {
+      // switchInlineQuery failed — show username input as fallback
+      console.log('switchInlineQuery failed, showing username input');
+      setStep('username');
+    }
+  };
+
+  const handleUsernameSend = async () => {
+    if (!username.trim()) return;
+    setStep('sending');
+    setError('');
+    try {
+      if (onSendByUsername) {
+        await onSendByUsername(image, username.trim());
+      }
       setStep('done');
     } catch (err: any) {
       setError(err.message || 'መላክ አልተቻለም');
-      setStep('preview');
+      setStep('username');
     }
   };
 
   const handleClose = () => {
     setStep('preview');
+    setUsername('');
     setError('');
     onClose();
   };
@@ -50,13 +69,44 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
               <span>መልዕክት: </span>
               <em>"እንኳን በደመር ደህና መጡ! 🌸🌼🌺" </em>
             </div>
-            {error && <p className="error-text">❌ {error}</p>}
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={onSave}>
                 💾 አስቀምጥ
               </button>
-              <button className="btn btn-primary" onClick={handleSend}>
+              <button className="btn btn-primary" onClick={handlePickContact}>
                 📤 ማን ላክ?
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'username' && (
+          <>
+            <h2>👤 የተቀባይ ያስገቡ</h2>
+            <p className="gift-desc">
+              የተቀባዩን Telegram username ያስገቡ
+            </p>
+            <div className="username-input-group">
+              <span className="at-sign">@</span>
+              <input
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.replace('@', ''))}
+                className="username-input"
+                autoFocus
+              />
+            </div>
+            {error && <p className="error-text">❌ {error}</p>}
+            <p className="gift-desc small">
+              💡 ተቀባይ በቅድሚያ Bot ላይ /start እንዲያደርግ ያስገብጉ!
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+                ↩️ ተመለስ
+              </button>
+              <button className="btn btn-primary" onClick={handleUsernameSend} disabled={!username.trim()}>
+                📤 ላክ
               </button>
             </div>
           </>
@@ -70,9 +120,6 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
             </div>
             <p className="gift-desc">
               ቅርዓቱ በመ硭ተት ላይ...
-            </p>
-            <p className="gift-desc small">
-              የተቀባዩን ይምረጡ
             </p>
           </>
         )}
@@ -172,6 +219,34 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave }: GiftModalP
         }
         .gift-message span {
           margin-right: var(--sp-xs);
+        }
+        .username-input-group {
+          display: flex;
+          align-items: center;
+          gap: var(--sp-sm);
+          margin-bottom: var(--sp-md);
+          background: rgba(255,255,255,0.05);
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(255,215,0,0.3);
+          padding: var(--sp-sm) var(--sp-md);
+        }
+        .username-input-group:focus-within {
+          border-color: var(--meskel-yellow);
+          box-shadow: 0 0 8px rgba(255,215,0,0.3);
+        }
+        .at-sign {
+          color: var(--meskel-yellow);
+          font-size: 16px;
+          font-weight: 600;
+        }
+        .username-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: var(--text-light);
+          font-size: 16px;
+          outline: none;
+          padding: var(--sp-sm) 0;
         }
         .sending-animation {
           margin: var(--sp-lg) 0;

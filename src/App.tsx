@@ -86,6 +86,9 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
+  // Store uploaded imageId for username fallback
+  const uploadedImageIdRef = useRef<string | null>(null);
+
   const handleSendGift = useCallback(async (image: string) => {
     // Step 1: Upload image to backend, get an imageId
     const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
@@ -106,25 +109,57 @@ function App() {
     }
 
     const imageId = uploadResult.imageId;
+    uploadedImageIdRef.current = imageId;
     console.log('📤 Image uploaded:', imageId);
 
-    // Step 2: Open Telegram contact picker via switchInlineQuery
-    // The bot's inline_query handler will pick up the imageId and show the image
+    // Step 2: Try to open Telegram contact picker via switchInlineQuery
     try {
       WebApp.switchInlineQuery(imageId, ['users']);
       setShowGift(false);
     } catch (err) {
-      console.log('switchInlineQuery failed, trying fallback:', err);
-      // Fallback: try with empty query to open contact picker
-      try {
-        WebApp.switchInlineQuery('', ['users']);
-        showAlert(`📱 በኋላ ስም ${imageId} ይ federate!`);
-        setShowGift(false);
-      } catch (e) {
-        throw new Error('ይቅርታ - የ接触 ማረፊያ አይ.open አይችልም');
-      }
+      console.log('switchInlineQuery failed:', err);
+      // Throw to trigger username fallback in GiftModal
+      throw new Error('contact_picker_unavailable');
     }
   }, [WebApp, user]);
+
+  const handleSendByUsername = useCallback(async (image: string, recipientUsername: string) => {
+    // Use the already-uploaded imageId, or upload first
+    let imageId = uploadedImageIdRef.current;
+
+    if (!imageId) {
+      const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageData: image,
+          caption: '🌸 እንኳን በደመር ደህና መጡ!',
+          senderName: user?.first_name || 'Enkutatash Drawer',
+          senderId: user?.id,
+        }),
+      });
+      const result = await uploadRes.json();
+      if (!result.success) throw new Error(result.message || 'Upload failed');
+      imageId = result.imageId;
+    }
+
+    // Send via backend API using username
+    const sendRes = await fetch(`${BOT_API_URL}/api/send-by-username`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageId: imageId,
+        username: recipientUsername,
+      }),
+    });
+
+    const sendResult = await sendRes.json();
+    if (!sendResult.success) {
+      throw new Error(sendResult.message || 'Failed to send');
+    }
+
+    uploadedImageIdRef.current = null;
+  }, [user]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
@@ -194,6 +229,7 @@ function App() {
         onClose={() => setShowGift(false)}
         onSend={handleSendGift}
         onSave={handleSaveImage}
+        onSendByUsername={handleSendByUsername}
       />
       <TipModal
         isOpen={showTip}

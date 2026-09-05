@@ -19,7 +19,7 @@ if (!BOT_TOKEN) {
 console.log('🔑 Bot token loaded, length:', BOT_TOKEN.length);
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// Temporary image storage (imageId -> { buffer, caption, senderName, expires })
+// Temporary image storage
 const pendingImages = new Map();
 
 // Auto-cleanup old images (10 min expiry)
@@ -34,36 +34,33 @@ setInterval(() => {
 
 console.log('🌸 Enkutatash Bot starting...');
 
-// /start
+// ===== BOT COMMANDS =====
+
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from?.first_name || 'User';
   bot.sendMessage(chatId,
     `🌸 እንኳን በደመር ደህና መጡ!\n\n` +
     `ሰላም ${name}!\n\n` +
-    `ከእንኳን በደመር ማዕበል ቅርዓት ይ relinquish!\n\n` +
-    `🎨 ከ Mini App ቅርዓት ይuemarı\n` +
-    `📤 /send ቁጥር - ቅርዓት ላክ\n` +
-    `📋 /list - ያስቀመጡትን ይመልከቱ\n` +
+    `ከእንኳን በደመር ማዕበል ቅርዓት ይuemaru!\n\n` +
+    `🎨 ከ Mini App ቅርዓት ይuemaru\n` +
     `❓ /help - እርዳታ`
   );
   console.log('🚀 /start from', msg.from?.id);
 });
 
-// /help
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(msg.chat.id,
     `📖 የBot መመሪያ:\n\n` +
-    `1️⃣ ቅርዓት ለማስቀምጥ:\n` +
+    `新形势下 ቅርዓት ለማስቀምጥ:\n` +
     `   ቅርዓቱን ይላኩ!\n\n` +
-    `2️⃣ ቅርዓት ለማካፈል:\n` +
-    `   /send ቁጥር\n\n` +
-    `3️⃣ ያስቀመጡትን ለማየት:\n` +
+    `新形势下 ቅርዓት ለማካፈል:\n` +
+    `   @enkutatash_drawer_bot\n\n` +
+    `新形势下 ያስቀመጡትን ለማየት:\n` +
     `   /list`
   );
 });
 
-// /list
 bot.onText(/\/list/, (msg) => {
   const userId = msg.from?.id;
   const userImages = [];
@@ -76,7 +73,7 @@ bot.onText(/\/list/, (msg) => {
 
   if (userImages.length === 0) {
     bot.sendMessage(msg.chat.id,
-      '📋 ያስቀመጡት ቅርዓት የለም!\n\n🎨 ከ Mini App ቅርዓት ይuemarı!'
+      '📋 ያስቀመጡት ቅርዓት የለም!\n\n🎨 ከ Mini App ቅርዓት ይuemaru!'
     );
     return;
   }
@@ -90,43 +87,14 @@ bot.onText(/\/list/, (msg) => {
   bot.sendMessage(msg.chat.id, text);
 });
 
-// /send - manual send via bot
-bot.onText(/\/send(?:\s+(\S+))?/, (msg, match) => {
-  const userId = msg.from?.id;
-  const chatId = msg.chat.id;
-  const imageId = match[1];
-
-  if (!imageId) {
-    bot.sendMessage(chatId, '❌ /send <image_id>\n\n📋 /list የስስ ቁጥር ይመልከቱ');
-    return;
-  }
-
-  const img = pendingImages.get(imageId);
-  if (!img || img.senderId !== userId) {
-    bot.sendMessage(chatId, '❌ ቅርዓቱ አልተገኘም!');
-    return;
-  }
-
-  // Store pending forward
-  if (!global.pendingForwards) global.pendingForwards = new Map();
-  global.pendingForwards.set(userId, { imageId, step: 'waiting_id' });
-
-  bot.sendMessage(chatId,
-    `📤 ማን ላክ?\n\n` +
-    `👤 የተቀባይ የተፅዕን ቁጥር ይላኩ\n\n` +
-    `➡️ ለምሳሌ: 123456789`
-  );
-});
-
-// Handle ALL messages (photos + text replies)
+// Handle photos sent directly to bot
 bot.on('message', (msg) => {
   const userId = msg.from?.id;
   const chatId = msg.chat.id;
 
-  // Skip commands
   if (msg.text && msg.text.startsWith('/')) return;
 
-  // Handle photos sent directly to bot
+  // Handle photos
   if (msg.photo && msg.photo.length > 0) {
     console.log('📸 Photo received from user:', userId);
     const photo = msg.photo[msg.photo.length - 1];
@@ -146,48 +114,14 @@ bot.on('message', (msg) => {
       `✅ ቅርዓቱ ተቀምጧል!\n\n` +
       `🔑 ID: ${imageId}\n` +
       `💬 መልዕክት: ${caption}\n\n` +
-      `ለማካፈል: /send ${imageId}`
+      `ለማካፈል ይ试 press the Mini App button! 🎁`
     );
-    return;
-  }
-
-  // Handle pending forward reply
-  if (!global.pendingForwards) global.pendingForwards = new Map();
-  const pending = global.pendingForwards.get(userId);
-  if (pending && pending.step === 'waiting_id' && msg.text && !msg.text.startsWith('/')) {
-    const target = msg.text.replace('@', '').trim();
-
-    if (!target.match(/^\d+$/)) {
-      bot.sendMessage(chatId, '❌ ትክክለኛ የተፅዕን ቁጥር ያስገቡ!');
-      return;
-    }
-
-    const img = pendingImages.get(pending.imageId);
-    if (!img) {
-      bot.sendMessage(chatId, '❌ ቅርዓቱ ጊዜው ዘልቷል!');
-      global.pendingForwards.delete(userId);
-      return;
-    }
-
-    bot.sendPhoto(parseInt(target), img.fileId, {
-      caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
-    }).then(() => {
-      bot.sendMessage(chatId, '✅ ቅርዓቱ ተላክፏል! 🎉');
-      global.pendingForwards.delete(userId);
-    }).catch((err) => {
-      console.error('Send error:', err.message);
-      bot.sendMessage(chatId,
-        `❌ መላክ አልተቻለም!\n\n` +
-        `💡 ተቀባይ Bot ላይ /start እንዲያደርግ ያስገብጉ!\n` +
-        `❌ ${err.message}`
-      );
-    });
     return;
   }
 });
 
 // ===== INLINE QUERY HANDLER =====
-// When user picks a contact via switchInlineQuery, bot sends the image
+// When user picks a contact via switchInlineQuery, bot shows the image
 bot.on('inline_query', async (query) => {
   const userId = query.from?.id;
   const queryText = query.query.trim();
@@ -195,7 +129,7 @@ bot.on('inline_query', async (query) => {
   console.log(`📤 Inline query from ${userId}: "${queryText}"`);
 
   if (!queryText) {
-    // Show user's stored images as inline results
+    // Show user's stored images
     const userImages = [];
     for (const [id, img] of pendingImages) {
       if (img.senderId === userId) {
@@ -208,50 +142,74 @@ bot.on('inline_query', async (query) => {
         type: 'article',
         id: 'none',
         title: '🎨 ቅርዓት ያድርጉ',
-        description: 'ቀጥል በ Mini App ቅርዓት ይuemarı',
+        description: 'ቀጥል በ Mini App ቅርዓት ይuemaru',
         input_message_content: {
-          message_text: '🌸 እንኳን በደመር ደህና መጡ! ቅርዓት ይuemarı!'
+          message_text: '🌸 እንኳን በደመር ደህና መጡ!'
         }
-      }]);
+      }], { cache_time: 0 });
     }
 
-    const results = userImages.map((img) => ({
-      type: 'photo',
-      id: img.id,
-      photo_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
-      thumb_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
-      caption: `🌸 ${img.caption}\n\nFrom: Enkutatash Drawer 🇪🇹`,
-      parse_mode: 'HTML'
-    }));
+    const results = userImages.map((img) => {
+      // Use file_id if available (from Telegram), otherwise use our API URL
+      const photoUrl = img.fileId
+        ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`
+        : `${getBaseUrl()}/api/image/${img.id}`;
+      const thumbUrl = img.fileId
+        ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`
+        : `${getBaseUrl()}/api/image/${img.id}`;
+
+      return {
+        type: 'photo',
+        id: img.id,
+        photo_url: photoUrl,
+        thumb_url: thumbUrl,
+        caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
+      };
+    });
 
     return bot.answerInlineQuery(query.id, results, { cache_time: 0 });
   }
 
-  // If query contains an imageId, send that image
+  // If query contains an imageId, show that specific image
   const img = pendingImages.get(queryText);
   if (img) {
-    const results = [{
+    const photoUrl = img.fileId
+      ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`
+      : `${getBaseUrl()}/api/image/${img.id}`;
+
+    return bot.answerInlineQuery(query.id, [{
       type: 'photo',
       id: queryText,
-      photo_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
-      thumb_url: `https://api.telegram.org/file/bot${BOT_TOKEN}/${img.fileId}`,
+      photo_url: photoUrl,
+      thumb_url: photoUrl,
       caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
-    }];
-    return bot.answerInlineQuery(query.id, results, { cache_time: 0 });
+    }], { cache_time: 0 });
   }
 
   bot.answerInlineQuery(query.id, [{
     type: 'article',
     id: 'notfound',
     title: '❌ ቅርዓቱ አልተገኘም',
-    description: 'ለተሳካ ሁኔታ ከ Mini App ይuemarı',
+    description: 'ለተሳካ ሁኔታ ከ Mini App ይuemaru',
     input_message_content: {
       message_text: '❌ ቅርዓቱ አልተገኘም'
     }
-  }]);
+  }], { cache_time: 0 });
 });
 
-// ===== API for Mini App =====
+// ===== API FOR MINI APP =====
+
+// Serve stored images by ID (for inline query results)
+app.get('/api/image/:id', (req, res) => {
+  const img = pendingImages.get(req.params.id);
+  if (!img || !img.buffer) {
+    return res.status(404).json({ error: 'Image not found or expired' });
+  }
+
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=600');
+  res.send(img.buffer);
+});
 
 // Upload image and get an ID for inline sharing
 app.post('/api/upload-image', (req, res) => {
@@ -275,7 +233,7 @@ app.post('/api/upload-image', (req, res) => {
       senderName: senderName || 'Enkutatash Drawer',
       senderId: senderId,
       created: new Date().toISOString(),
-      expires: Date.now() + 600000 // 10 minutes
+      expires: Date.now() + 600000
     });
 
     console.log(`📤 Image uploaded: ${imageId} from ${senderName}`);
@@ -287,7 +245,45 @@ app.post('/api/upload-image', (req, res) => {
   }
 });
 
-// Direct send via API (for bot commands)
+// Send image to a user by username
+app.post('/api/send-by-username', async (req, res) => {
+  try {
+    const { imageId, username } = req.body;
+
+    if (!imageId || !username) {
+      return res.json({ success: false, message: 'Missing imageId or username' });
+    }
+
+    const img = pendingImages.get(imageId);
+    if (!img) {
+      return res.json({ success: false, message: 'Image not found or expired' });
+    }
+
+    const cleanUsername = username.replace('@', '').trim();
+    const target = `@${cleanUsername}`;
+
+    console.log(`📤 Sending image ${imageId} to ${target}`);
+
+    // Try to send using buffer (for uploaded base64 images) or file_id
+    if (img.buffer) {
+      await bot.sendPhoto(target, img.buffer, {
+        caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
+      });
+    } else if (img.fileId) {
+      await bot.sendPhoto(target, img.fileId, {
+        caption: `🌸 ${img.caption}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
+      });
+    }
+
+    console.log(`✅ Image sent to ${target}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Send by username error:', error.message);
+    res.json({ success: false, message: error.message || 'Failed to send' });
+  }
+});
+
+// Send image to a user by ID
 app.post('/api/send-image', async (req, res) => {
   try {
     const { imageData, caption, recipientId, senderName } = req.body;
@@ -323,6 +319,10 @@ app.post('/api/send-image', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', bot: 'Enkutatash Bot 🌸', pendingImages: pendingImages.size });
 });
+
+function getBaseUrl() {
+  return process.env.BASE_URL || `https://enkutatash-drawer.onrender.com`;
+}
 
 const PORT = process.env.PORT || 3001;
 
