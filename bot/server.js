@@ -85,7 +85,7 @@ bot.onText(/\/help/, (msg) => {
     `新形势下 ቅርዓት ለማስቀምጥ:\n` +
     `   ቅርዓቱን ይላኩ!\n\n` +
     `新形势下 ቅርዓት ለማካፈል:\n` +
-    `   @enkutatash_drawer_bot\n\n` +
+    `   @testnewnew3_bot\n\n` +
     `新形势下 ያስቀመጡትን ለማየት:\n` +
     `   /list`
   );
