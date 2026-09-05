@@ -111,10 +111,20 @@ function App() {
     const imageId = uploadResult.imageId;
     console.log('📤 Image uploaded:', imageId);
 
-    // Step 2: Remember the link that opens the bot chat and delivers this
-    // exact card, so the kid can simply tap forward ↗️ to share it.
+    // Step 2: Send directly — open Telegram's friend picker right inside the
+    // mini app. The kid taps a friend and the bot delivers the card to them.
+    try {
+      WebApp.switchInlineQuery(imageId, ['users']);
+      setShowGift(false); // Telegram is now showing the friend picker
+      return;
+    } catch (err) {
+      console.log('Direct send unavailable, falling back to forward:', err);
+    }
+
+    // Step 3 (fallback): Deliver the card to the user's own chat with the bot
+    // so they can tap forward ↗️ to share it with a friend instead.
     forwardLinkRef.current = `https://t.me/testnewnew3_bot?start=send_${imageId}`;
-  }, [user]);
+  }, [WebApp, user]);
 
   const handleOpenChat = useCallback(() => {
     const url = forwardLinkRef.current ?? 'https://t.me/testnewnew3_bot';
