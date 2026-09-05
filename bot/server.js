@@ -306,11 +306,13 @@ app.post('/api/prepare-message', async (req, res) => {
       caption: `🌸 ${img.caption || 'እንኳን በደመር ደህና መጡ!'}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`
     };
 
-    // savePreparedInlineMessage is not in this library version, call the API directly
+    // savePreparedInlineMessage is not in this library version, call the API directly.
+    // Use a urlencoded form (like every other method in this library) — the response
+    // then arrives as a plain string the library can parse.
     const prepared = await bot._request('savePreparedInlineMessage', {
-      json: {
+      form: {
         user_id: userId,
-        result: result,
+        result: JSON.stringify(result),
         allow_user_chats: true,
         allow_bot_chats: true,
         allow_group_chats: true,
