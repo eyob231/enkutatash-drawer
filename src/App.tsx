@@ -86,6 +86,9 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
+  // Link to the bot chat that delivers the card for forwarding
+  const forwardLinkRef = useRef<string | null>(null);
+
   const handleSendGift = useCallback(async (image: string) => {
     // Step 1: Upload image to backend, get an imageId
     const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
@@ -108,43 +111,17 @@ function App() {
     const imageId = uploadResult.imageId;
     console.log('📤 Image uploaded:', imageId);
 
-    // Step 2: Try to open Telegram contact picker via switchInlineQuery
-    try {
-      WebApp.switchInlineQuery(imageId, ['users']);
-      setShowGift(false);
-      return;
-    } catch (err) {
-      console.log('switchInlineQuery failed, falling back to forward:', err);
-    }
-
-    // Step 3 (fallback): Send the card to the user's own chat with the bot,
-    // so they can simply tap the forward button to share it with a friend.
-    if (!user?.id) {
-      throw new Error('Unable to send: Telegram user not found');
-    }
-
-    const sendRes = await fetch(`${BOT_API_URL}/api/send-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imageData: image,
-        caption: '🌸 እንኳን በደመር ደህና መጡ!',
-        recipientId: user.id,
-        senderName: user?.first_name || 'Enkutatash Drawer',
-      }),
-    });
-
-    const sendResult = await sendRes.json();
-    if (!sendResult.success) {
-      throw new Error(sendResult.message || 'Failed to send');
-    }
-  }, [WebApp, user]);
+    // Step 2: Remember the link that opens the bot chat and delivers this
+    // exact card, so the kid can simply tap forward ↗️ to share it.
+    forwardLinkRef.current = `https://t.me/enkutatash_drawer_bot?start=send_${imageId}`;
+  }, [user]);
 
   const handleOpenChat = useCallback(() => {
+    const url = forwardLinkRef.current ?? 'https://t.me/enkutatash_drawer_bot';
     try {
-      WebApp.openTelegramLink('https://t.me/enkutatash_drawer_bot');
+      WebApp.openTelegramLink(url);
     } catch (e) {
-      window.open('https://t.me/enkutatash_drawer_bot', '_blank');
+      window.open(url, '_blank');
     }
   }, [WebApp]);
 

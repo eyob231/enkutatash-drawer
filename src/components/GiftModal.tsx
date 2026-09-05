@@ -70,7 +70,7 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }
               <span className="spinner">🌸</span>
             </div>
             <p className="gift-desc">
-              የተቀባዩን ይምረጡ...
+              ቅርዓትዎን በማዘጋጀት ላይ...
             </p>
           </>
         )}
@@ -82,7 +82,9 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }
               <img src={image} alt="Drawing" />
             </div>
             <p className="gift-desc success-text">
-              ቅርዓትዎ በቻትዎ ደርሷል! ከፍተው
+              ቅርዓትዎ ተዘጋጅቷል! 🎉
+              <br />
+              ቻትዎን ክፍተው
               <br />
               ↗️ አስተላልፈው ለጓደኛዎ ይላኩ!
             </p>

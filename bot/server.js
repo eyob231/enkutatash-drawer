@@ -36,8 +36,38 @@ console.log('🌸 Enkutatash Bot starting...');
 
 // ===== BOT COMMANDS =====
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start(?: (.+))?/, (msg, match) => {
   const chatId = msg.chat.id;
+  const payload = match && match[1] ? match[1].trim() : '';
+
+  // Deep link from the Mini App: deliver the card so the kid can forward it
+  if (payload.startsWith('send_')) {
+    const imageId = payload.slice(5);
+    console.log(`📬 /start send_${imageId} from`, msg.from?.id);
+
+    const img = pendingImages.get(imageId);
+    if (!img) {
+      return bot.sendMessage(chatId,
+        '❌ ቅርዓቱ አልተገኘም ወይም ጊዜው አልፏል።\n\n🎨 አዲስ ቅርዓት ለመስራት ወደ Mini App ይመለሱ!'
+      );
+    }
+
+    const caption = `🌸 ${img.caption || 'እንኳን በደመር ደህና መጡ!'}\n\nFrom: ${img.senderName || 'Enkutatash Drawer'} 🇪🇹`;
+
+    const sendPromise = img.buffer
+      ? bot.sendPhoto(chatId, img.buffer, { caption })
+      : bot.sendPhoto(chatId, img.fileId, { caption });
+
+    return sendPromise
+      .then(() => bot.sendMessage(chatId,
+        '↗️ አስተላልፈው ለጓደኛዎ ይላኩ!'
+      ))
+      .catch((e) => {
+        console.error('❌ Failed to deliver card:', e.message);
+        bot.sendMessage(chatId, '❌ ቅርዓቱን መላክ አልተቻለም።');
+      });
+  }
+
   const name = msg.from?.first_name || 'User';
   bot.sendMessage(chatId,
     `🌸 እንኳን በደመር ደህና መጡ!\n\n` +
