@@ -6,13 +6,12 @@ interface GiftModalProps {
   onClose: () => void;
   onSend: (image: string) => Promise<void>;
   onSave: () => void;
-  onSendByUsername: (image: string, recipientUsername: string) => Promise<void>;
+  onOpenChat: () => void;
 }
 
-export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUsername }: GiftModalProps) {
-  const [step, setStep] = useState<'preview' | 'sending' | 'username' | 'done' | 'error'>('preview');
+export function GiftModal({ isOpen, image, onClose, onSend, onSave, onOpenChat }: GiftModalProps) {
+  const [step, setStep] = useState<'preview' | 'sending' | 'done' | 'error'>('preview');
   const [errorMsg, setErrorMsg] = useState('');
-  const [recipientUsername, setRecipientUsername] = useState('');
 
   if (!isOpen || !image) return null;
 
@@ -21,13 +20,12 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
     setErrorMsg('');
     try {
       await onSend(image);
+      // If the modal is still open, the gift was sent to the user's own chat
+      // so they can forward it to a friend.
+      setStep('done');
     } catch (err: any) {
-      if (err.message === 'contact_picker_unavailable') {
-        setStep('username');
-      } else {
-        setErrorMsg(err.message || 'Failed to open contact picker');
-        setStep('error');
-      }
+      setErrorMsg(err.message || 'Failed to send your gift');
+      setStep('error');
     }
   };
 
@@ -65,45 +63,6 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
           </>
         )}
 
-        {step === 'username' && (
-          <>
-            <h2>👤 ተጠቃሚ ያስገቡ</h2>
-            <p className="gift-desc">
-              Contact picker አልተከፈተም። የተቀባዩን ቃላቸውን ያስገቡ:
-            </p>
-            <input
-              type="text"
-              className="username-input"
-              placeholder="@username"
-              value={recipientUsername}
-              onChange={(e) => setRecipientUsername(e.target.value)}
-              autoFocus
-            />
-            <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={() => setStep('preview')}>
-                ↩️ ተመለስ
-              </button>
-              <button
-                className="btn btn-primary"
-                disabled={!recipientUsername.trim()}
-                onClick={async () => {
-                  setStep('sending');
-                  setErrorMsg('');
-                  try {
-                    await onSendByUsername(image!, recipientUsername.trim().replace('@', ''));
-                    setStep('done');
-                  } catch (err: any) {
-                    setErrorMsg(err.message || 'Failed to send');
-                    setStep('error');
-                  }
-                }}
-              >
-                📤 ላክ
-              </button>
-            </div>
-          </>
-        )}
-
         {step === 'sending' && (
           <>
             <h2>📤 በመላክ ላይ...</h2>
@@ -118,15 +77,19 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
 
         {step === 'done' && (
           <>
-            <h2>✅ ተላክፏል!</h2>
+            <h2>🎉 ተዘጋጅቷል!</h2>
             <div className="gift-preview-small">
               <img src={image} alt="Drawing" />
             </div>
             <p className="gift-desc success-text">
-              ቅርዓቱ ተላክፏል! 🎉
+              ቅርዓትዎ በቻትዎ ደርሷል! ከፍተው
+              <br />
+              ↗️ አስተላልፈው ለጓደኛዎ ይላኩ!
             </p>
             <div className="modal-actions">
-              <button className="btn btn-primary" onClick={handleClose}>✅ ጥሩ</button>
+              <button className="btn btn-primary" onClick={onOpenChat}>
+                📩 ቻት ክፈት
+              </button>
             </div>
           </>
         )}
@@ -207,23 +170,6 @@ export function GiftModal({ isOpen, image, onClose, onSend, onSave, onSendByUser
         }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .modal-actions { display: flex; gap: var(--sp-sm); }
-        .username-input {
-          width: 100%;
-          padding: var(--sp-md);
-          border-radius: var(--radius-md);
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,215,0,0.4);
-          color: var(--text);
-          font-size: 14px;
-          text-align: center;
-          margin-bottom: var(--sp-md);
-          outline: none;
-        }
-        .username-input:focus {
-          border-color: var(--meskel-yellow);
-          box-shadow: 0 0 8px rgba(255,215,0,0.3);
-        }
-        .username-input::placeholder { color: var(--text-muted); }
         .btn { flex: 1; padding: var(--sp-md); border-radius: var(--radius-md); font-size: 14px; font-weight: 600; }
         .btn-primary {
           background: linear-gradient(135deg, #FFD700, #E6C200);

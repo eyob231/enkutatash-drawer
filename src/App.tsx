@@ -86,9 +86,6 @@ function App() {
     downloadImage(capturedImage);
   }, [capturedImage, downloadImage]);
 
-  // Store uploaded imageId for username fallback
-  const uploadedImageIdRef = useRef<string | null>(null);
-
   const handleSendGift = useCallback(async (image: string) => {
     // Step 1: Upload image to backend, get an imageId
     const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
@@ -109,47 +106,31 @@ function App() {
     }
 
     const imageId = uploadResult.imageId;
-    uploadedImageIdRef.current = imageId;
     console.log('📤 Image uploaded:', imageId);
 
     // Step 2: Try to open Telegram contact picker via switchInlineQuery
     try {
       WebApp.switchInlineQuery(imageId, ['users']);
       setShowGift(false);
+      return;
     } catch (err) {
-      console.log('switchInlineQuery failed:', err);
-      // Throw to trigger username fallback in GiftModal
-      throw new Error('contact_picker_unavailable');
-    }
-  }, [WebApp, user]);
-
-  const handleSendByUsername = useCallback(async (image: string, recipientUsername: string) => {
-    // Use the already-uploaded imageId, or upload first
-    let imageId = uploadedImageIdRef.current;
-
-    if (!imageId) {
-      const uploadRes = await fetch(`${BOT_API_URL}/api/upload-image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageData: image,
-          caption: '🌸 እንኳን በደመር ደህና መጡ!',
-          senderName: user?.first_name || 'Enkutatash Drawer',
-          senderId: user?.id,
-        }),
-      });
-      const result = await uploadRes.json();
-      if (!result.success) throw new Error(result.message || 'Upload failed');
-      imageId = result.imageId;
+      console.log('switchInlineQuery failed, falling back to forward:', err);
     }
 
-    // Send via backend API using username
-    const sendRes = await fetch(`${BOT_API_URL}/api/send-by-username`, {
+    // Step 3 (fallback): Send the card to the user's own chat with the bot,
+    // so they can simply tap the forward button to share it with a friend.
+    if (!user?.id) {
+      throw new Error('Unable to send: Telegram user not found');
+    }
+
+    const sendRes = await fetch(`${BOT_API_URL}/api/send-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        imageId: imageId,
-        username: recipientUsername,
+        imageData: image,
+        caption: '🌸 እንኳን በደመር ደህና መጡ!',
+        recipientId: user.id,
+        senderName: user?.first_name || 'Enkutatash Drawer',
       }),
     });
 
@@ -157,9 +138,15 @@ function App() {
     if (!sendResult.success) {
       throw new Error(sendResult.message || 'Failed to send');
     }
+  }, [WebApp, user]);
 
-    uploadedImageIdRef.current = null;
-  }, [user]);
+  const handleOpenChat = useCallback(() => {
+    try {
+      WebApp.openTelegramLink('https://t.me/enkutatash_drawer_bot');
+    } catch (e) {
+      window.open('https://t.me/enkutatash_drawer_bot', '_blank');
+    }
+  }, [WebApp]);
 
   const handleTipPay = useCallback((amount: number, method: string) => {
     const txRef = `enkutatash-${Date.now()}`;
@@ -229,7 +216,7 @@ function App() {
         onClose={() => setShowGift(false)}
         onSend={handleSendGift}
         onSave={handleSaveImage}
-        onSendByUsername={handleSendByUsername}
+        onOpenChat={handleOpenChat}
       />
       <TipModal
         isOpen={showTip}
